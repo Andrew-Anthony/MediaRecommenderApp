@@ -8,7 +8,6 @@ import java.util.Optional;
 
 public interface MovieRepository extends JpaRepository<Movie, Long> {
     Optional<Movie> findByTmdbId(Long tmdbId);
-    boolean existsByTmdbId(Long tmdbId);
     List<Movie> findByTitleContainingIgnoreCase(String keyword);
     List<Movie> findByGenres_Name(String genreName);
 }
