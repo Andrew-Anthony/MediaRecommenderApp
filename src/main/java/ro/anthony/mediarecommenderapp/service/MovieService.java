@@ -1,6 +1,5 @@
 package ro.anthony.mediarecommenderapp.service;
 
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import ro.anthony.mediarecommenderapp.exception.ResourceNotFoundException;
