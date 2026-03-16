@@ -25,7 +25,7 @@ public class UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
     }
 
-    public User registerUser(String username, String email, String passwordHash) {
+    public User registerUser(String username, String email, String password) {
         if(userRepository.existsByUsername(username)) {
             throw new IllegalArgumentException("Username already taken: " + username);
         }
@@ -36,7 +36,7 @@ public class UserService {
         User user = new User();
         user.setUsername(username);
         user.setEmail(email);
-        user.setPasswordHash(passwordHash);
+        user.setPasswordHash(password); //TODO: hash with bcrypt when adding security
 
         return userRepository.save(user);
     }
