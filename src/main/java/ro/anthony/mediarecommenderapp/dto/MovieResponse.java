@@ -2,6 +2,8 @@ package ro.anthony.mediarecommenderapp.dto;
 
 import lombok.Getter;
 import lombok.Setter;
+import ro.anthony.mediarecommenderapp.model.Genre;
+import ro.anthony.mediarecommenderapp.model.Movie;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -17,4 +19,17 @@ public class MovieResponse {
     private LocalDate releaseDate;
     private Double voteAverage;
     private List<String> genres;
+
+    public static MovieResponse fromMovie(Movie movie) {
+        MovieResponse movieResponse = new MovieResponse();
+        movieResponse.setId(movie.getId());
+        movieResponse.setTmdbId(movie.getTmdbId());
+        movieResponse.setTitle(movie.getTitle());
+        movieResponse.setOverview(movie.getOverview());
+        movieResponse.setPosterPath(movie.getPosterPath());
+        movieResponse.setReleaseDate(movie.getReleaseDate());
+        movieResponse.setVoteAverage(movie.getVoteAverage());
+        movieResponse.setGenres(movie.getGenres().stream().map(Genre::getName).toList());
+        return movieResponse;
+    }
 }
