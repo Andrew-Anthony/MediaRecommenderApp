@@ -15,6 +15,13 @@ import java.util.List;
 public class MovieController {
     private final MovieService movieService;
 
+    @GetMapping
+    public ResponseEntity<List<MovieResponse>> getAllMovies() {
+        List<Movie> movieList = movieService.getAllMovies();
+        List<MovieResponse> movieResponseList = movieList.stream().map(MovieResponse::fromMovie).toList();
+        return ResponseEntity.ok(movieResponseList);
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<MovieResponse> getMovieById(@PathVariable Long id) {
         Movie movie = movieService.getMovieById(id);
