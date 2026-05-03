@@ -73,9 +73,9 @@ public class TmdbService {
         movie.setVoteCount(response.getVoteCount());
         movie.setPopularity(response.getPopularity());
 
-        if(response.getGenreIds() != null) {
-            for(Integer genreId : response.getGenreIds()) {
-                Genre genre = genreService.getGenreByTmdbId(genreId);
+        if (response.getGenres() != null) {
+            for (TmdbGenre tmdbGenre : response.getGenres()) {
+                Genre genre = genreService.getGenreByTmdbId(tmdbGenre.getId());
                 movie.getGenres().add(genre);
             }
         }
