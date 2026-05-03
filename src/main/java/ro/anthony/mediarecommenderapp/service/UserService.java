@@ -1,6 +1,7 @@
 package ro.anthony.mediarecommenderapp.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import ro.anthony.mediarecommenderapp.exception.ResourceNotFoundException;
 import ro.anthony.mediarecommenderapp.model.User;
@@ -10,6 +11,8 @@ import ro.anthony.mediarecommenderapp.repository.UserRepository;
 @RequiredArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+
     public User getUserById(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
@@ -36,7 +39,7 @@ public class UserService {
         User user = new User();
         user.setUsername(username);
         user.setEmail(email);
-        user.setPasswordHash(password); //TODO: hash with bcrypt when adding security
+        user.setPasswordHash(passwordEncoder.encode(password));
 
         return userRepository.save(user);
     }
