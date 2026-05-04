@@ -19,6 +19,7 @@ public class MovieResponse {
     private LocalDate releaseDate;
     private Double voteAverage;
     private List<String> genres;
+    private Double predictedRating;
 
     public static MovieResponse fromMovie(Movie movie) {
         MovieResponse movieResponse = new MovieResponse();

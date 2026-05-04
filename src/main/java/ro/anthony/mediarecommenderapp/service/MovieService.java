@@ -23,6 +23,10 @@ public class MovieService {
                 .orElseThrow(() -> new ResourceNotFoundException("Cannot find movie with tmdb id:" + tmdbId));
     }
 
+    public java.util.Optional<Movie> findByTmdbId(Long tmdbId) {
+        return movieRepository.findByTmdbId(tmdbId);
+    }
+
     public List<Movie> getMoviesByGenre(String genreName) {
         return movieRepository.findByGenres_Name(genreName);
     }

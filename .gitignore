@@ -38,3 +38,8 @@ out/
 
 ### secrets ###
 /src/main/resources/application-local.properties
+
+### Python ###
+recommendation-service/venv/
+recommendation-service/data/
+recommendation-service/__pycache__/
