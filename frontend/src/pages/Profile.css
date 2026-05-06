@@ -1,0 +1,54 @@
+.profile-page {
+  padding-top: calc(var(--nav-height) + 40px);
+  min-height: 100vh;
+  padding-left: var(--content-padding);
+  padding-right: var(--content-padding);
+  padding-bottom: 60px;
+}
+
+.profile-card {
+  max-width: 500px;
+  padding: 32px;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.profile-card h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 24px;
+}
+
+.profile-field {
+  margin-bottom: 16px;
+}
+
+.profile-field-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.profile-field-value {
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.profile-logout-btn {
+  margin-top: 24px;
+  padding: 10px 24px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: var(--accent-error);
+  color: var(--text-primary);
+  border-radius: var(--radius-md);
+  transition: opacity var(--transition-fast);
+}
+
+.profile-logout-btn:hover {
+  opacity: 0.85;
+}

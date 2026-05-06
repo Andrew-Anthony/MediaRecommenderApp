@@ -16,6 +16,7 @@ public class MovieResponse {
     private String title;
     private String overview;
     private String posterPath;
+    private String backdropPath;
     private LocalDate releaseDate;
     private Double voteAverage;
     private List<String> genres;
@@ -28,6 +29,7 @@ public class MovieResponse {
         movieResponse.setTitle(movie.getTitle());
         movieResponse.setOverview(movie.getOverview());
         movieResponse.setPosterPath(movie.getPosterPath());
+        movieResponse.setBackdropPath(movie.getBackdropPath());
         movieResponse.setReleaseDate(movie.getReleaseDate());
         movieResponse.setVoteAverage(movie.getVoteAverage());
         movieResponse.setGenres(movie.getGenres().stream().map(Genre::getName).toList());

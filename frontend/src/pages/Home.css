@@ -1,0 +1,66 @@
+.home-page {
+  padding-top: var(--nav-height);
+  min-height: 100vh;
+}
+
+.home-hero {
+  position: relative;
+  height: 500px;
+  display: flex;
+  align-items: flex-end;
+  padding: 0 var(--content-padding) 60px;
+  margin-bottom: 32px;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(1, 64, 80, 0.15) 40%,
+    var(--bg-dark) 100%
+  );
+}
+
+.home-hero-content {
+}
+
+.home-hero-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1.15;
+  margin-bottom: 12px;
+}
+
+.home-hero-subtitle {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.home-hero-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  background: var(--primary);
+  color: var(--text-primary);
+  border-radius: var(--radius-md);
+  transition: background var(--transition-fast);
+}
+
+.home-hero-btn:hover {
+  background: var(--primary-light);
+}
+
+.home-sections {
+  padding-bottom: 60px;
+}
+
+.home-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}

@@ -1,0 +1,35 @@
+.movie-row {
+  margin-bottom: 40px;
+}
+
+.movie-row-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding: 0 var(--content-padding);
+}
+
+.movie-row-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.movie-row-list {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 8px var(--content-padding) 16px;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+}
+
+.movie-row-list::-webkit-scrollbar {
+  display: none;
+}
+
+.movie-row-empty {
+  padding: 24px var(--content-padding);
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
