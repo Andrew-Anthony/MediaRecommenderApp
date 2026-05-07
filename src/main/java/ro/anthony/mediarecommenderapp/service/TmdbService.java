@@ -83,4 +83,26 @@ public class TmdbService {
         return movieService.saveMovie(movie);
     }
 
+    public int importTopRated(int pages) {
+        int imported = 0;
+        for (int page = 1; page <= pages; page++) {
+            TmdbSearchResponse response = tmdbRestClient.get()
+                    .uri("/movie/top_rated?page={page}", page)
+                    .retrieve()
+                    .body(TmdbSearchResponse.class);
+
+            if (response == null || response.getResults() == null) continue;
+
+            for (var tmdbMovie : response.getResults()) {
+                try {
+                    importMovie(tmdbMovie.getId());
+                    imported++;
+                } catch (Exception e) {
+                    System.out.println("Skipping tmdbId " + tmdbMovie.getId() + ": " + e.getMessage());
+                }
+            }
+        }
+        return imported;
+    }
+
 }

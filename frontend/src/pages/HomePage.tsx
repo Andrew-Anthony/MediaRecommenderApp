@@ -7,7 +7,7 @@ import MovieRow from '../components/MovieRow';
 import './Home.css';
 
 export default function HomePage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, userId } = useAuth();
   const navigate = useNavigate();
 
   const [allMovies, setAllMovies] = useState<Movie[]>([]);
@@ -23,7 +23,7 @@ export default function HomePage() {
         if (isAuthenticated) {
           try {
             const recRes = await api.get<Movie[]>('/recommendations', {
-              params: { user_id: 1, n: 15 },
+              params: { user_id: userId, n: 15 },
             });
             setRecommendations(recRes.data);
           } catch {
@@ -38,7 +38,7 @@ export default function HomePage() {
     };
 
     fetchData();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, userId]);
 
   const handleMovieClick = (movie: Movie) => {
     navigate(`/movie/${movie.id}`);

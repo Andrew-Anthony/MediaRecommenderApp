@@ -21,7 +21,7 @@ export default function LoginPage() {
 
     try {
       const response = await api.post<AuthResponse>('/auth/login', { username, password });
-      login(response.data.token, response.data.username);
+      login(response.data.token, response.data.username, response.data.userId);
       navigate('/');
     } catch {
       setError('Invalid username or password');

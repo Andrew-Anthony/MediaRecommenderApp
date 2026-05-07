@@ -32,5 +32,11 @@ public class TmdbController {
         tmdbService.syncGenres();
         return ResponseEntity.ok().build();
     }
+
+    @PostMapping("/import/top-rated")
+    public ResponseEntity<String> importTopRated(@RequestParam(defaultValue = "5") int pages) {
+        int imported = tmdbService.importTopRated(pages);
+        return ResponseEntity.ok("Imported " + imported + " movies");
+    }
 }
 
