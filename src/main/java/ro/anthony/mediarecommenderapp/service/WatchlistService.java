@@ -55,4 +55,23 @@ public class WatchlistService {
                 .orElseThrow(() -> new ResourceNotFoundException("Movie not found in watchlist"));
         watchlistItemRepository.delete(watchlistItem);
     }
+
+    public void markAsWatched(Long userId, Long movieId) {
+        watchlistItemRepository.findByUserIdAndMovieId(userId, movieId)
+                .ifPresentOrElse(
+                        item -> {
+                            item.setStatus(WatchlistStatus.WATCHED);
+                            watchlistItemRepository.save(item);
+                        },
+                        () -> {
+                            User user = userService.getUserById(userId);
+                            Movie movie = movieService.getMovieById(movieId);
+                            WatchlistItem item = new WatchlistItem();
+                            item.setUser(user);
+                            item.setMovie(movie);
+                            item.setStatus(WatchlistStatus.WATCHED);
+                            watchlistItemRepository.save(item);
+                        }
+                );
+    }
 }

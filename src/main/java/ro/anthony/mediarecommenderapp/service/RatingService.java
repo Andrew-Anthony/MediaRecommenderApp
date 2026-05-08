@@ -16,6 +16,7 @@ public class RatingService {
     private final RatingRepository ratingRepository;
     private final UserService userService;
     private final MovieService movieService;
+    private final WatchlistService watchlistService;
 
     public List<Rating> getRatingsByUser(Long userId) {
         return ratingRepository.findByUserId(userId);
@@ -44,7 +45,9 @@ public class RatingService {
         rating.setScore(score);
         rating.setReview(review);
 
-        return ratingRepository.save(rating);
+        Rating saved = ratingRepository.save(rating);
+        watchlistService.markAsWatched(userId, movieId);
+        return saved;
     }
 
     public Rating updateRating(Long userId, Long movieId, Double score, String review) {
