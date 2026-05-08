@@ -64,6 +64,15 @@ public class UserService {
         return userRepository.save(user);
     }
 
+    public void changePassword(Long id, String currentPassword, String newPassword) {
+        User user = getUserById(id);
+        if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+            throw new IllegalArgumentException("Current password is incorrect");
+        }
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
+
     public void deleteUser(Long id){
         User user = getUserById(id);
         userRepository.delete(user);

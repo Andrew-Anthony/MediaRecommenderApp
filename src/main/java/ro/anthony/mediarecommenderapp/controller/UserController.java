@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import ro.anthony.mediarecommenderapp.dto.ChangePasswordRequest;
 import ro.anthony.mediarecommenderapp.dto.UserRegistrationRequest;
 import ro.anthony.mediarecommenderapp.dto.UserResponse;
 import ro.anthony.mediarecommenderapp.dto.UserUpdateRequest;
@@ -62,6 +63,13 @@ public class UserController {
         userResponse.setCreatedAt(user.getCreatedAt());
 
         return ResponseEntity.ok(userResponse);
+    }
+
+    @PatchMapping("/{id}/password")
+    public ResponseEntity<Void> changePassword(@PathVariable Long id,
+                                               @RequestBody ChangePasswordRequest request) {
+        userService.changePassword(id, request.getCurrentPassword(), request.getNewPassword());
+        return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{id}")

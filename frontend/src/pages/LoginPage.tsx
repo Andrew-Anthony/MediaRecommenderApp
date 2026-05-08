@@ -1,5 +1,5 @@
 import { useState, FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import type { AuthResponse } from '../types';
@@ -13,6 +13,8 @@ export default function LoginPage() {
 
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const usernameChanged = new URLSearchParams(location.search).get('reason') === 'username_changed';
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -37,6 +39,11 @@ export default function LoginPage() {
         <p className="auth-subtitle">Sign in to get personalized recommendations</p>
 
         <form className="auth-form" onSubmit={handleSubmit}>
+          {usernameChanged && (
+            <div className="auth-error" style={{ background: 'rgba(1,64,80,0.15)', border: '1px solid var(--primary-light)', color: 'var(--primary-light)' }}>
+              Username changed — please sign in again with your new username.
+            </div>
+          )}
           {error && <div className="auth-error">{error}</div>}
 
           <div className="form-group">
