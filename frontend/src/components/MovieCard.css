@@ -1,7 +1,8 @@
 .movie-card {
   position: relative;
-  flex-shrink: 0;
-  width: 280px;
+  flex: 0 0 calc((100% - 80px) / 6);
+  min-width: 180px;
+  max-width: 280px;
   border-radius: var(--radius-md);
   overflow: hidden;
   cursor: pointer;

@@ -17,19 +17,39 @@
 
 .movie-row-list {
   display: flex;
-  gap: 12px;
-  overflow-x: auto;
+  flex-wrap: wrap;
+  gap: 16px;
   padding: 8px var(--content-padding) 16px;
-  scroll-behavior: smooth;
-  scrollbar-width: none;
-}
-
-.movie-row-list::-webkit-scrollbar {
-  display: none;
 }
 
 .movie-row-empty {
   padding: 24px var(--content-padding);
   color: var(--text-muted);
   font-size: 0.875rem;
+}
+
+.movie-row-show-more {
+  display: flex;
+  justify-content: center;
+  padding: 0 var(--content-padding);
+}
+
+.movie-row-show-more-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 32px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.movie-row-show-more-btn:hover {
+  background: var(--primary);
+  border-color: var(--primary);
 }

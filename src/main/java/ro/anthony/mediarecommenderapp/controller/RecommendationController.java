@@ -18,7 +18,7 @@ public class RecommendationController {
     private final RecommendationService recommendationService;
 
     @GetMapping
-    public ResponseEntity<List<MovieResponse>> getRecommendations(@RequestParam("user_id") int userId, @RequestParam(defaultValue = "10") int n) {
+    public ResponseEntity<List<MovieResponse>> getRecommendations(@RequestParam("user_id") Long userId, @RequestParam(defaultValue = "10") int n) {
         List<MovieResponse> recommendations = recommendationService.getRecommendations(userId, n);
         return ResponseEntity.ok(recommendations);
     }

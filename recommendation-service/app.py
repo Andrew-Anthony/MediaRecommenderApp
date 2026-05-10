@@ -1,25 +1,31 @@
 from flask import Flask, request, jsonify
-from model import train_model, get_recommendations
+from model import train_model, get_hybrid_recommendations
 
 app = Flask(__name__)
 
-@app.route("/recommend", methods=["GET"])
-def recommend():
-    user_id = request.args.get("user_id", type=int)
-    n = request.args.get("n", default=10, type=int)
 
-    if user_id is None:
-        return jsonify({"error": "user_id parameter is required"}), 400
+@app.route("/recommend", methods=["POST"])
+def recommend():
+    data = request.get_json()
+
+    if not data or "ratings" not in data:
+        return jsonify({"error": "Request body must include 'ratings' array"}), 400
+
+    user_ratings = data["ratings"]
+    n = data.get("n", 10)
+    exclude_tmdb_ids = data.get("excludeTmdbIds", [])
 
     try:
-        recommendations = get_recommendations(user_id, n)
+        recommendations = get_hybrid_recommendations(user_ratings, n, exclude_tmdb_ids=exclude_tmdb_ids)
         return jsonify(recommendations)
     except RuntimeError as e:
         return jsonify({"error": str(e)}), 500
 
+
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "ok"})
+
 
 if __name__ == "__main__":
     train_model()

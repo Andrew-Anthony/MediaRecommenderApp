@@ -52,7 +52,10 @@
 }
 
 .watchlist-grid .movie-card {
+  flex: unset;
   width: 100%;
+  max-width: 100%;
+  min-width: unset;
 }
 
 .watchlist-empty {
