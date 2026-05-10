@@ -9,6 +9,7 @@ import ro.anthony.mediarecommenderapp.dto.RatingRequest;
 import ro.anthony.mediarecommenderapp.dto.RatingResponse;
 import ro.anthony.mediarecommenderapp.model.Rating;
 import ro.anthony.mediarecommenderapp.service.RatingService;
+import ro.anthony.mediarecommenderapp.security.AuthorizationService;
 
 import java.util.List;
 
@@ -17,6 +18,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class RatingController {
     private final RatingService ratingService;
+    private final AuthorizationService authorizationService;
 
     private RatingResponse toRatingResponse(Rating rating) {
         RatingResponse ratingResponse = new RatingResponse();
@@ -34,6 +36,7 @@ public class RatingController {
     @PostMapping("/users/{userId}/movies/{movieId}/ratings")
     public ResponseEntity<RatingResponse> addRating(@PathVariable Long userId, @PathVariable Long movieId,
                                                     @Valid @RequestBody RatingRequest request) {
+        authorizationService.verifyOwnership(userId);
         Rating rating = ratingService.addRating(
                 userId,
                 movieId,
@@ -47,6 +50,7 @@ public class RatingController {
     @PutMapping("/users/{userId}/movies/{movieId}/ratings")
     public ResponseEntity<RatingResponse> updateRating(@PathVariable Long userId, @PathVariable Long movieId,
                                                        @Valid @RequestBody RatingRequest request) {
+        authorizationService.verifyOwnership(userId);
         Rating rating = ratingService.updateRating(
                 userId,
                 movieId,
@@ -59,12 +63,14 @@ public class RatingController {
 
     @DeleteMapping("/users/{userId}/movies/{movieId}/ratings")
     public ResponseEntity<Void> deleteRating(@PathVariable Long userId, @PathVariable Long movieId) {
+        authorizationService.verifyOwnership(userId);
         ratingService.deleteRating(userId, movieId);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/users/{userId}/ratings")
     public ResponseEntity<List<RatingResponse>> getUserRatings(@PathVariable Long userId) {
+        authorizationService.verifyOwnership(userId);
         List<Rating> ratingList = ratingService.getRatingsByUser(userId);
         List<RatingResponse> ratingResponseList = ratingList.stream().map(this::toRatingResponse).toList();
         return ResponseEntity.ok(ratingResponseList);

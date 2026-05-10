@@ -11,15 +11,18 @@ import ro.anthony.mediarecommenderapp.dto.UserResponse;
 import ro.anthony.mediarecommenderapp.dto.UserUpdateRequest;
 import ro.anthony.mediarecommenderapp.model.User;
 import ro.anthony.mediarecommenderapp.service.UserService;
+import ro.anthony.mediarecommenderapp.security.AuthorizationService;
 
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
 public class UserController {
     private final UserService userService;
+    private final AuthorizationService authorizationService;
 
     @GetMapping("/{id}")
     public ResponseEntity<UserResponse> getUserById(@PathVariable Long id) {
+        authorizationService.verifyOwnership(id);
         User user = userService.getUserById(id);
 
         UserResponse userResponse = new UserResponse();
@@ -50,6 +53,7 @@ public class UserController {
 
     @PutMapping("/{id}")
     public ResponseEntity<UserResponse> updateUser(@PathVariable Long id, @Valid @RequestBody UserUpdateRequest request) {
+        authorizationService.verifyOwnership(id);
         User user = userService.updateUser(
                 id,
                 request.getUsername(),
@@ -68,12 +72,14 @@ public class UserController {
     @PatchMapping("/{id}/password")
     public ResponseEntity<Void> changePassword(@PathVariable Long id,
                                                @RequestBody ChangePasswordRequest request) {
+        authorizationService.verifyOwnership(id);
         userService.changePassword(id, request.getCurrentPassword(), request.getNewPassword());
         return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+        authorizationService.verifyOwnership(id);
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
     }
