@@ -66,8 +66,15 @@ public class RecommendationService {
                 continue;
             }
 
-            Movie movie = movieService.findByTmdbId(Long.valueOf(rec.getTmdbId()))
-                    .orElseGet(() -> tmdbService.importMovie(rec.getTmdbId()));
+            Movie movie = movieService.findByTmdbId(Long.valueOf(rec.getTmdbId())).orElse(null);
+            if (movie == null) {
+                try {
+                    movie = tmdbService.importMovie(rec.getTmdbId());
+                } catch (Exception e) {
+                    System.out.println("Skipping recommendation tmdbId=" + rec.getTmdbId() + ": " + e.getMessage());
+                    continue;
+                }
+            }
 
             MovieResponse response = MovieResponse.fromMovie(movie);
             response.setPredictedRating(rec.getPredictedRating());
