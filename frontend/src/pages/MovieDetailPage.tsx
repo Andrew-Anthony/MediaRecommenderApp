@@ -21,6 +21,7 @@ interface RatingData {
 
 interface WatchlistData {
   id: number;
+  movieId: number;
   status: string;
 }
 
@@ -73,10 +74,11 @@ export default function MovieDetailPage() {
           // Fetch watchlist status
           try {
             const watchlistRes = await api.get<WatchlistData[]>(`/users/${userId}/watchlist`);
-            const found = watchlistRes.data.find((w) => w.id === Number(id) || (w as any).movieId === Number(id));
+            const found = watchlistRes.data.find((w) => w.movieId === Number(id));
             if (found) setWatchlistStatus(found.status);
+            else setWatchlistStatus(null);
           } catch {
-            // Not in watchlist
+            setWatchlistStatus(null);
           }
         }
       } catch (err) {

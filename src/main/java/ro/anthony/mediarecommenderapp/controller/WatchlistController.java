@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ro.anthony.mediarecommenderapp.dto.WatchlistRequest;
 import ro.anthony.mediarecommenderapp.dto.WatchlistResponse;
+import ro.anthony.mediarecommenderapp.dto.WatchlistStatusUpdateRequest;
 import ro.anthony.mediarecommenderapp.model.WatchlistItem;
 import ro.anthony.mediarecommenderapp.model.WatchlistStatus;
 import ro.anthony.mediarecommenderapp.service.WatchlistService;
@@ -64,7 +65,7 @@ public class WatchlistController {
 
     @PutMapping("/{movieId}")
     public ResponseEntity<WatchlistResponse> changeWatchlistItemStatus(@PathVariable Long userId, @PathVariable Long movieId,
-                                                                       @Valid @RequestBody WatchlistRequest request) {
+                                                                       @Valid @RequestBody WatchlistStatusUpdateRequest request) {
         authorizationService.verifyOwnership(userId);
         WatchlistItem watchlistItem = watchlistService.updateWatchlistStatus(
                 userId,
