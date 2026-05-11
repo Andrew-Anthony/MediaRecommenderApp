@@ -45,15 +45,16 @@
 /* Poster */
 .movie-detail-poster {
   flex-shrink: 0;
+  align-self: flex-start;
   width: 220px;
+  height: auto;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-elevated);
-  aspect-ratio: 2 / 3;
-  object-fit: cover;
 }
 
 .movie-detail-poster-placeholder {
   flex-shrink: 0;
+  align-self: flex-start;
   width: 220px;
   aspect-ratio: 2 / 3;
   border-radius: var(--radius-lg);
