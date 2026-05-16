@@ -30,6 +30,9 @@ public class SecurityConfig {
                                                                                 .requestMatchers(HttpMethod.GET,"/api/movies/**").permitAll()
                                                                                 .requestMatchers(HttpMethod.GET, "/api/genres").permitAll()
                                                                                 .requestMatchers(HttpMethod.GET, "/api/tmdb/search").permitAll()
+                                                                                .requestMatchers(HttpMethod.POST, "/api/tmdb/refresh-all").hasRole("ADMIN")
+                                                                                .requestMatchers(HttpMethod.POST, "/api/tmdb/import/**").hasRole("ADMIN")
+                                                                                .requestMatchers(HttpMethod.POST, "/api/tmdb/genres/sync").hasRole("ADMIN")
                                                                                 .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();

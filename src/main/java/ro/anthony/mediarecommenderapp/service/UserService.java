@@ -5,6 +5,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import ro.anthony.mediarecommenderapp.exception.ResourceNotFoundException;
 import ro.anthony.mediarecommenderapp.model.User;
+import ro.anthony.mediarecommenderapp.model.UserRole;
 import ro.anthony.mediarecommenderapp.repository.UserRepository;
 
 @Service
@@ -40,6 +41,7 @@ public class UserService {
         user.setUsername(username);
         user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(password));
+        user.setRole(UserRole.USER);
 
         return userRepository.save(user);
     }
