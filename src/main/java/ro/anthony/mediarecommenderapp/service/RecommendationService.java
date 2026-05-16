@@ -28,6 +28,10 @@ public class RecommendationService {
     public List<MovieResponse> getRecommendations(Long userId, int n) {
         List<Rating> userRatings = ratingService.getRatingsByUser(userId);
 
+        if (userRatings.isEmpty()) {
+            return new ArrayList<>();
+        }
+
         List<Map<String, Object>> ratingsPayload = new ArrayList<>();
         for (Rating r : userRatings) {
             Map<String, Object> entry = new HashMap<>();
