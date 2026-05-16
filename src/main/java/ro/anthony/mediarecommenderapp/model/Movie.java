@@ -49,6 +49,11 @@ public class Movie {
 
     private Double popularity;
 
+    private String director;
+
+    @Column(columnDefinition = "TEXT")
+    private String castNames;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 

@@ -6,8 +6,11 @@ export interface Movie {
   posterPath: string;
   backdropPath: string;
   releaseDate: string;
+  runtime?: number;
   voteAverage: number;
   genres: string[];
+  director?: string;
+  cast?: string[];
   predictedRating?: number;
 }
 

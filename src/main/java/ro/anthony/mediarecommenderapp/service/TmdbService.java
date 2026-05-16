@@ -3,6 +3,8 @@ package ro.anthony.mediarecommenderapp.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import ro.anthony.mediarecommenderapp.dto.tmdb.TmdbCastMember;
+import ro.anthony.mediarecommenderapp.dto.tmdb.TmdbCrewMember;
 import ro.anthony.mediarecommenderapp.dto.tmdb.TmdbGenre;
 import ro.anthony.mediarecommenderapp.dto.tmdb.TmdbGenreListResponse;
 import ro.anthony.mediarecommenderapp.dto.tmdb.TmdbMovieResponse;
@@ -11,10 +13,15 @@ import ro.anthony.mediarecommenderapp.model.Genre;
 import ro.anthony.mediarecommenderapp.model.Movie;
 
 import java.time.LocalDate;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class TmdbService {
+    private static final int TOP_CAST = 5;
+
     private final RestClient tmdbRestClient;
     private final MovieService movieService;
     private final GenreService genreService;
@@ -28,7 +35,7 @@ public class TmdbService {
 
     public TmdbMovieResponse getMovieDetails(int tmdbId) {
         return tmdbRestClient.get()
-                .uri("/movie/{id}", tmdbId)
+                .uri("/movie/{id}?append_to_response=credits", tmdbId)
                 .retrieve()
                 .body(TmdbMovieResponse.class);
     }
@@ -55,7 +62,8 @@ public class TmdbService {
     public Movie importMovie(int tmdbId) {
         TmdbMovieResponse response = getMovieDetails(tmdbId);
 
-        Movie movie = new Movie();
+        Movie movie = movieService.findByTmdbId((long) tmdbId).orElseGet(Movie::new);
+
         movie.setTmdbId(Long.valueOf(response.getId()));
         movie.setTitle(response.getTitle());
         movie.setOriginalTitle(response.getOriginalTitle());
@@ -74,13 +82,33 @@ public class TmdbService {
         movie.setPopularity(response.getPopularity());
 
         if (response.getGenres() != null) {
+            movie.getGenres().clear();
             for (TmdbGenre tmdbGenre : response.getGenres()) {
                 Genre genre = genreService.getGenreByTmdbId(tmdbGenre.getId());
                 movie.getGenres().add(genre);
             }
         }
 
-        return movieService.saveMovie(movie);
+        if (response.getCredits() != null) {
+            if (response.getCredits().getCrew() != null) {
+                String director = response.getCredits().getCrew().stream()
+                        .filter(c -> "Director".equals(c.getJob()))
+                        .map(TmdbCrewMember::getName)
+                        .findFirst()
+                        .orElse(null);
+                movie.setDirector(director);
+            }
+            if (response.getCredits().getCast() != null) {
+                String cast = response.getCredits().getCast().stream()
+                        .sorted(Comparator.comparing(c -> c.getOrder() == null ? Integer.MAX_VALUE : c.getOrder()))
+                        .limit(TOP_CAST)
+                        .map(TmdbCastMember::getName)
+                        .collect(Collectors.joining(", "));
+                movie.setCastNames(cast.isEmpty() ? null : cast);
+            }
+        }
+
+        return movieService.saveOrUpdate(movie);
     }
 
     public int importTopRated(int pages) {
@@ -103,6 +131,20 @@ public class TmdbService {
             }
         }
         return imported;
+    }
+
+    public int refreshAllMovies() {
+        List<Movie> all = movieService.getAllMovies();
+        int refreshed = 0;
+        for (Movie m : all) {
+            try {
+                importMovie(m.getTmdbId().intValue());
+                refreshed++;
+            } catch (Exception e) {
+                System.out.println("Skipping refresh for tmdbId " + m.getTmdbId() + ": " + e.getMessage());
+            }
+        }
+        return refreshed;
     }
 
 }

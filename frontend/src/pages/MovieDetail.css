@@ -119,6 +119,32 @@
   max-width: 700px;
 }
 
+.movie-detail-credits {
+  margin-top: 20px;
+  max-width: 700px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.movie-detail-credit-row {
+  display: flex;
+  gap: 12px;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.movie-detail-credit-label {
+  flex-shrink: 0;
+  min-width: 70px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.movie-detail-credit-value {
+  color: var(--text-secondary);
+}
+
 /* Loading & Back */
 .movie-detail-loading {
   display: flex;

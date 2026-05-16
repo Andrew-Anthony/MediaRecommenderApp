@@ -44,4 +44,6 @@ public class TmdbMovieResponse {
     private List<Integer> genreIds;
 
     private List<TmdbGenre> genres;
+
+    private TmdbCredits credits;
 }

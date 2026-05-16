@@ -6,6 +6,7 @@ import ro.anthony.mediarecommenderapp.model.Genre;
 import ro.anthony.mediarecommenderapp.model.Movie;
 
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.List;
 
 @Getter
@@ -18,8 +19,11 @@ public class MovieResponse {
     private String posterPath;
     private String backdropPath;
     private LocalDate releaseDate;
+    private Integer runtime;
     private Double voteAverage;
     private List<String> genres;
+    private String director;
+    private List<String> cast;
     private Double predictedRating;
 
     public static MovieResponse fromMovie(Movie movie) {
@@ -31,8 +35,13 @@ public class MovieResponse {
         movieResponse.setPosterPath(movie.getPosterPath());
         movieResponse.setBackdropPath(movie.getBackdropPath());
         movieResponse.setReleaseDate(movie.getReleaseDate());
+        movieResponse.setRuntime(movie.getRuntime());
         movieResponse.setVoteAverage(movie.getVoteAverage());
         movieResponse.setGenres(movie.getGenres().stream().map(Genre::getName).toList());
+        movieResponse.setDirector(movie.getDirector());
+        if (movie.getCastNames() != null && !movie.getCastNames().isBlank()) {
+            movieResponse.setCast(Arrays.stream(movie.getCastNames().split(", ")).toList());
+        }
         return movieResponse;
     }
 }

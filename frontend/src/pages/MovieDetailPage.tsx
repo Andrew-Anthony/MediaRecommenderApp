@@ -205,6 +205,7 @@ export default function MovieDetailPage() {
           <div className="movie-detail-meta">
             <span className="movie-detail-rating">★ {movie.voteAverage?.toFixed(1)}</span>
             {year && <span>{year}</span>}
+            {movie.runtime && <span>{movie.runtime} min</span>}
           </div>
 
           <div className="movie-detail-genres">
@@ -214,6 +215,23 @@ export default function MovieDetailPage() {
           </div>
 
           <p className="movie-detail-overview">{movie.overview}</p>
+
+          {(movie.director || (movie.cast && movie.cast.length > 0)) && (
+            <div className="movie-detail-credits">
+              {movie.director && (
+                <div className="movie-detail-credit-row">
+                  <span className="movie-detail-credit-label">Director</span>
+                  <span className="movie-detail-credit-value">{movie.director}</span>
+                </div>
+              )}
+              {movie.cast && movie.cast.length > 0 && (
+                <div className="movie-detail-credit-row">
+                  <span className="movie-detail-credit-label">Cast</span>
+                  <span className="movie-detail-credit-value">{movie.cast.join(', ')}</span>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Action buttons */}
           {isAuthenticated && (

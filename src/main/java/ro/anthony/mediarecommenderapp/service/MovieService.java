@@ -40,6 +40,10 @@ public class MovieService {
                 .orElseGet(() -> movieRepository.save(movie));
     }
 
+    public Movie saveOrUpdate(Movie movie) {
+        return movieRepository.save(movie);
+    }
+
     public List<Movie> searchMovies(String keyword) {
         return movieRepository.findByTitleContainingIgnoreCase(keyword);
     }

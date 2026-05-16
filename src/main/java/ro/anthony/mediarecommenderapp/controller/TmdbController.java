@@ -38,5 +38,11 @@ public class TmdbController {
         int imported = tmdbService.importTopRated(pages);
         return ResponseEntity.ok("Imported " + imported + " movies");
     }
+
+    @PostMapping("/refresh-all")
+    public ResponseEntity<String> refreshAll() {
+        int refreshed = tmdbService.refreshAllMovies();
+        return ResponseEntity.ok("Refreshed " + refreshed + " movies");
+    }
 }
 
