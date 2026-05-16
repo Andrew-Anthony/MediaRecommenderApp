@@ -152,7 +152,7 @@ def _build_user_feature_profile(user_ratings):
     return csr_matrix(profile)
 
 
-def get_hybrid_recommendations(user_ratings, n=10, svd_weight=0.4, content_weight=0.6, exclude_tmdb_ids=None):
+def get_hybrid_recommendations(user_ratings, n=10, svd_weight=0.6, content_weight=0.4, exclude_tmdb_ids=None, apply_quality_filter=True):
     if model is None:
         raise RuntimeError("Model not trained yet")
 
@@ -181,9 +181,10 @@ def get_hybrid_recommendations(user_ratings, n=10, svd_weight=0.4, content_weigh
     for movie_id, row_idx in movielens_id_to_row.items():
         if movie_id in excluded_movielens_ids:
             continue
-        stats = movie_quality.get(movie_id)
-        if stats is None or stats[0] < MIN_MEAN_RATING or stats[1] < MIN_RATING_COUNT:
-            continue
+        if apply_quality_filter:
+            stats = movie_quality.get(movie_id)
+            if stats is None or stats[0] < MIN_MEAN_RATING or stats[1] < MIN_RATING_COUNT:
+                continue
         svd_raw = model.predict(svd_user_id, movie_id).est
         svd_score = (svd_raw - 0.5) / 4.5
         cb_score = float(cb_raw[row_idx])
