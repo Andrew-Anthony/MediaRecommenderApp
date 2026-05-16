@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import type { Movie } from '../types';
@@ -28,15 +28,7 @@ export default function SearchPage() {
 
   const navigate = useNavigate();
 
-  const handleSearch = async (searchQuery: string) => {
-    setQuery(searchQuery);
-
-    if (searchQuery.trim().length < 2) {
-      setResults([]);
-      setSearched(false);
-      return;
-    }
-
+  const performSearch = async (searchQuery: string) => {
     setLoading(true);
     setSearched(true);
 
@@ -78,6 +70,18 @@ export default function SearchPage() {
     }
   };
 
+  useEffect(() => {
+    if (query.trim().length < 2) {
+      setResults([]);
+      setSearched(false);
+      return;
+    }
+    const timeoutId = setTimeout(() => {
+      performSearch(query);
+    }, 400);
+    return () => clearTimeout(timeoutId);
+  }, [query]);
+
   const handleMovieClick = async (movie: Movie) => {
     if (movie.id > 0) {
       navigate(`/movie/${movie.id}`);
@@ -103,7 +107,7 @@ export default function SearchPage() {
             type="text"
             placeholder="Search for a movie..."
             value={query}
-            onChange={(e) => handleSearch(e.target.value)}
+            onChange={(e) => setQuery(e.target.value)}
             autoFocus
           />
         </div>
