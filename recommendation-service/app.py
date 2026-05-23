@@ -14,9 +14,15 @@ def recommend():
     user_ratings = data["ratings"]
     n = data.get("n", 10)
     exclude_tmdb_ids = data.get("excludeTmdbIds", [])
+    apply_quality_filter = data.get("applyQualityFilter", True)
 
     try:
-        recommendations = get_hybrid_recommendations(user_ratings, n, exclude_tmdb_ids=exclude_tmdb_ids)
+        recommendations = get_hybrid_recommendations(
+            user_ratings,
+            n,
+            exclude_tmdb_ids=exclude_tmdb_ids,
+            apply_quality_filter=apply_quality_filter,
+        )
         return jsonify(recommendations)
     except RuntimeError as e:
         return jsonify({"error": str(e)}), 500

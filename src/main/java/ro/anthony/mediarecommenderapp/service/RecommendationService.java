@@ -26,6 +26,10 @@ public class RecommendationService {
     private final WatchlistService watchlistService;
 
     public List<MovieResponse> getRecommendations(Long userId, int n) {
+        return getCandidates(userId, n, true);
+    }
+
+    public List<MovieResponse> getCandidates(Long userId, int n, boolean applyQualityFilter) {
         List<Rating> userRatings = ratingService.getRatingsByUser(userId);
 
         if (userRatings.isEmpty()) {
@@ -50,6 +54,7 @@ public class RecommendationService {
         requestBody.put("ratings", ratingsPayload);
         requestBody.put("excludeTmdbIds", excludeTmdbIds);
         requestBody.put("n", n);
+        requestBody.put("applyQualityFilter", applyQualityFilter);
 
         List<RecommendationResponse> recommendations = recommendationRestClient.post()
                 .uri("/recommend")
