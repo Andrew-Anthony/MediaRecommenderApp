@@ -23,6 +23,9 @@ export default function Navbar() {
           {isAuthenticated && (
             <Link to="/watchlist" className={location.pathname === '/watchlist' ? 'active' : ''}>Watchlist</Link>
           )}
+          {isAuthenticated && (
+            <Link to="/chat" className={location.pathname === '/chat' ? 'active' : ''}>Chat</Link>
+          )}
         </div>
       </div>
 

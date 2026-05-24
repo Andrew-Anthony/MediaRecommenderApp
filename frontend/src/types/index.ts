@@ -37,3 +37,17 @@ export interface RegisterRequest {
   email: string;
   password: string;
 }
+
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface ChatRequest {
+  messages: ChatMessage[];
+}
+
+export interface ChatResponse {
+  reply: string;
+  movies: Movie[];
+}
