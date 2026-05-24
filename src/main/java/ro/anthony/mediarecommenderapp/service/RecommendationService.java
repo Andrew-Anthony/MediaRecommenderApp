@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import ro.anthony.mediarecommenderapp.dto.MovieResponse;
 import ro.anthony.mediarecommenderapp.dto.RecommendationResponse;
+import ro.anthony.mediarecommenderapp.dto.chat.LLMIntentFilters;
 import ro.anthony.mediarecommenderapp.model.Movie;
 import ro.anthony.mediarecommenderapp.model.Rating;
 import ro.anthony.mediarecommenderapp.model.WatchlistItem;
@@ -30,6 +31,10 @@ public class RecommendationService {
     }
 
     public List<MovieResponse> getCandidates(Long userId, int n, boolean applyQualityFilter) {
+        return getCandidates(userId, n, applyQualityFilter, null);
+    }
+
+    public List<MovieResponse> getCandidates(Long userId, int n, boolean applyQualityFilter, LLMIntentFilters filters) {
         List<Rating> userRatings = ratingService.getRatingsByUser(userId);
 
         if (userRatings.isEmpty()) {
@@ -55,6 +60,23 @@ public class RecommendationService {
         requestBody.put("excludeTmdbIds", excludeTmdbIds);
         requestBody.put("n", n);
         requestBody.put("applyQualityFilter", applyQualityFilter);
+
+        if (filters != null) {
+            Map<String, Object> filtersPayload = new HashMap<>();
+            if (filters.getGenres() != null && !filters.getGenres().isEmpty()) {
+                filtersPayload.put("genres", filters.getGenres());
+            }
+            if (filters.getMinYear() != null) filtersPayload.put("minYear", filters.getMinYear());
+            if (filters.getMaxYear() != null) filtersPayload.put("maxYear", filters.getMaxYear());
+            if (filters.getMinRuntime() != null) filtersPayload.put("minRuntime", filters.getMinRuntime());
+            if (filters.getMaxRuntime() != null) filtersPayload.put("maxRuntime", filters.getMaxRuntime());
+            if (filters.getCast() != null && !filters.getCast().isEmpty()) {
+                filtersPayload.put("cast", filters.getCast());
+            }
+            if (!filtersPayload.isEmpty()) {
+                requestBody.put("filters", filtersPayload);
+            }
+        }
 
         List<RecommendationResponse> recommendations = recommendationRestClient.post()
                 .uri("/recommend")

@@ -1,5 +1,6 @@
 import os
 import pickle
+import re
 
 import numpy as np
 import pandas as pd
@@ -21,6 +22,8 @@ tfidf_matrix = None
 movielens_id_to_row = {}
 tmdb_to_movielens = {}
 movie_quality = {}  # movielens_id -> (mean_rating, num_ratings)
+movie_attributes = {}  # movielens_id -> {"year": int|None, "genres": set[str]}
+_YEAR_RE = re.compile(r"\((\d{4})\)")
 
 MIN_MEAN_RATING = 3.5  # ~7/10 on the app's 1-10 scale
 MIN_RATING_COUNT = 10  # minimum ratings to consider the mean reliable
@@ -80,7 +83,7 @@ def _load_tmdb_metadata():
 
 def train_model():
     global model, ratings_df, movies_df, links_df, tmdb_metadata
-    global tfidf_matrix, movielens_id_to_row, tmdb_to_movielens, movie_quality
+    global tfidf_matrix, movielens_id_to_row, tmdb_to_movielens, movie_quality, movie_attributes
 
     ratings_df = pd.read_csv(os.path.join(DATA_DIR, "ratings.csv"))
     movies_df = pd.read_csv(os.path.join(DATA_DIR, "movies.csv"))
@@ -113,9 +116,29 @@ def train_model():
     movielens_ids = []
     for _, row in movies_df.iterrows():
         movielens_id = int(row["movieId"])
-        soup = _build_movie_soup(movielens_id, row.get("genres", ""))
+        raw_genres = row.get("genres", "") or ""
+        title = row.get("title", "") or ""
+
+        soup = _build_movie_soup(movielens_id, raw_genres)
         soups.append(soup)
         movielens_ids.append(movielens_id)
+
+        year = None
+        m = _YEAR_RE.search(title)
+        if m:
+            year = int(m.group(1))
+        genres_set = set()
+        if raw_genres and raw_genres != "(no genres listed)":
+            genres_set = {g for g in raw_genres.split("|") if g}
+
+        cast_set = set()
+        meta = tmdb_metadata.get(movielens_id) if tmdb_metadata else None
+        if meta:
+            for actor in meta.get("cast", []) or []:
+                if actor:
+                    cast_set.add(actor.lower())
+
+        movie_attributes[movielens_id] = {"year": year, "genres": genres_set, "cast": cast_set}
 
     movielens_id_to_row = {mid: idx for idx, mid in enumerate(movielens_ids)}
 
@@ -152,9 +175,15 @@ def _build_user_feature_profile(user_ratings):
     return csr_matrix(profile)
 
 
-def get_hybrid_recommendations(user_ratings, n=10, svd_weight=0.6, content_weight=0.4, exclude_tmdb_ids=None, apply_quality_filter=True):
+def get_hybrid_recommendations(user_ratings, n=10, svd_weight=0.6, content_weight=0.4, exclude_tmdb_ids=None, apply_quality_filter=True, filters=None):
     if model is None:
         raise RuntimeError("Model not trained yet")
+
+    filters = filters or {}
+    filter_genres = set(filters.get("genres") or [])
+    filter_min_year = filters.get("minYear")
+    filter_max_year = filters.get("maxYear")
+    filter_cast = [c.lower() for c in (filters.get("cast") or []) if c]
 
     excluded_movielens_ids = set()
     for r in user_ratings:
@@ -185,6 +214,24 @@ def get_hybrid_recommendations(user_ratings, n=10, svd_weight=0.6, content_weigh
             stats = movie_quality.get(movie_id)
             if stats is None or stats[0] < MIN_MEAN_RATING or stats[1] < MIN_RATING_COUNT:
                 continue
+
+        attrs = movie_attributes.get(movie_id)
+        if filter_genres:
+            if not attrs or not (attrs["genres"] & filter_genres):
+                continue
+        if filter_min_year is not None:
+            if not attrs or attrs["year"] is None or attrs["year"] < filter_min_year:
+                continue
+        if filter_max_year is not None:
+            if not attrs or attrs["year"] is None or attrs["year"] > filter_max_year:
+                continue
+        if filter_cast:
+            movie_cast = attrs.get("cast", set()) if attrs else set()
+            if not movie_cast:
+                continue
+            if not any(fc in actor for fc in filter_cast for actor in movie_cast):
+                continue
+
         svd_raw = model.predict(svd_user_id, movie_id).est
         svd_score = (svd_raw - 0.5) / 4.5
         cb_score = float(cb_raw[row_idx])

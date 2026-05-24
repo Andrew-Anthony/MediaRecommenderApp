@@ -1,4 +1,5 @@
 import { useState, useEffect, FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import './Profile.css';
@@ -24,6 +25,12 @@ const parseError = (err: any): string => {
 
 export default function ProfilePage() {
   const { username, userId, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
 
   const [userData, setUserData] = useState<UserData | null>(null);
   const [stats, setStats] = useState<Stats>({ watchlistCount: 0, ratingsCount: 0 });
@@ -178,7 +185,7 @@ export default function ProfilePage() {
           </form>
         </div>
 
-        {/* Right — Change Password */}
+        {/* Right — Change Password + Sign Out */}
         <div className="profile-section">
           <div className="profile-section-title">Change Password</div>
           <form className="profile-form" onSubmit={handleChangePassword}>
@@ -220,6 +227,16 @@ export default function ProfilePage() {
             </button>
           </form>
         </div>
+      </div>
+
+      <div className="profile-section" style={{ marginTop: 20 }}>
+        <div className="profile-section-title">Sign Out</div>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: 16 }}>
+          Sign out of your account on this device.
+        </p>
+        <button type="button" className="profile-btn profile-btn-danger" onClick={handleLogout}>
+          Sign Out
+        </button>
       </div>
     </div>
   );

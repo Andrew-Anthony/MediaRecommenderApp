@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import ro.anthony.mediarecommenderapp.dto.MovieResponse;
 import ro.anthony.mediarecommenderapp.dto.chat.ChatMessage;
+import ro.anthony.mediarecommenderapp.dto.chat.LLMIntentFilters;
 import ro.anthony.mediarecommenderapp.dto.chat.LLMRerankReply;
 import ro.anthony.mediarecommenderapp.dto.chat.UserPreferenceProfileDto;
 import ro.anthony.mediarecommenderapp.dto.chat.gemini.*;
@@ -39,6 +40,22 @@ public class GeminiLLMService implements LLMService {
                     "preferredThemes", Map.of("type", "ARRAY", "items", Map.of("type", "STRING"))
             ),
             "required", List.of("likes", "dislikes", "preferredThemes")
+    );
+
+    private static final Map<String, Object> INTENT_SCHEMA = Map.of(
+            "type", "OBJECT",
+            "properties", Map.ofEntries(
+                    Map.entry("wantsRecommendations", Map.of("type", "BOOLEAN")),
+                    Map.entry("genres", Map.of("type", "ARRAY", "items", Map.of("type", "STRING"))),
+                    Map.entry("minYear", Map.of("type", "INTEGER")),
+                    Map.entry("maxYear", Map.of("type", "INTEGER")),
+                    Map.entry("minRuntime", Map.of("type", "INTEGER")),
+                    Map.entry("maxRuntime", Map.of("type", "INTEGER")),
+                    Map.entry("cast", Map.of("type", "ARRAY", "items", Map.of("type", "STRING"))),
+                    Map.entry("mood", Map.of("type", "STRING")),
+                    Map.entry("similarTo", Map.of("type", "ARRAY", "items", Map.of("type", "STRING")))
+            ),
+            "required", List.of("wantsRecommendations")
     );
 
     private static final Map<String, Object> RERANK_SCHEMA = Map.of(
@@ -87,6 +104,74 @@ public class GeminiLLMService implements LLMService {
     }
 
     @Override
+    public LLMIntentFilters extractIntent(List<ChatMessage> history, UserPreferenceProfileDto profile) {
+        String systemInstruction = buildIntentSystemInstruction(profile);
+        String jsonText = callGemini(history, systemInstruction, INTENT_SCHEMA, 0.1);
+
+        try {
+            return objectMapper.readValue(jsonText, LLMIntentFilters.class);
+        } catch (JacksonException e) {
+            throw new RuntimeException("Failed to parse Gemini intent response: " + jsonText, e);
+        }
+    }
+
+    private String buildIntentSystemInstruction(UserPreferenceProfileDto profile) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("You analyze the user's latest message (in conversation context) and extract HARD FILTERS ");
+        sb.append("that will be applied to narrow down the recommendation pool.\n\n");
+
+        sb.append("CRITICAL: ALWAYS set `wantsRecommendations`:\n");
+        sb.append("- true: user is asking for movie suggestions (\"recomandă\", \"vreau ceva\", \"caut un film\", \"give me a movie\", etc.)\n");
+        sb.append("- false: user is just chatting (\"salut\", \"mulțumesc\", \"cum funcționezi\", \"hello\", asking about the app, etc.)\n");
+        sb.append("If false, OMIT all other fields (no filtering needed for a chat reply).\n\n");
+
+        sb.append("FILTER EXTRACTION RULES (only when wantsRecommendations=true):\n");
+        sb.append("- For fields NOT implied by the user, omit them.\n");
+        sb.append("- For fields the user DID imply, you MUST extract them — do not be overly cautious.\n\n");
+
+        sb.append("DECADE RULE (CRITICAL — always set BOTH bounds for a decade):\n");
+        sb.append("- \"anii 80\" / \"80s\" / \"the 80s\" / \"eighties\" → {\"minYear\":1980,\"maxYear\":1989}\n");
+        sb.append("- \"anii 90\" / \"90s\" / \"nineties\" → {\"minYear\":1990,\"maxYear\":1999}\n");
+        sb.append("- \"anii 2000\" / \"2000s\" → {\"minYear\":2000,\"maxYear\":2009}\n");
+        sb.append("- \"anii 70\" / \"70s\" → {\"minYear\":1970,\"maxYear\":1979}\n");
+        sb.append("- A decade reference is a STRICT bound. Setting only minYear is WRONG.\n\n");
+
+        sb.append("OTHER MAPPINGS:\n");
+        sb.append("- \"recent\" / \"new\" / \"din ultimii ani\" → minYear=2018 (no maxYear).\n");
+        sb.append("- \"old\" / \"clasice\" / \"vechi\" → maxYear=1990 (no minYear).\n");
+        sb.append("- \"short\" / \"scurt\" → maxRuntime=120; \"long\" / \"lung\" → minRuntime=150.\n");
+        sb.append("- \"animated\" / \"desene\" / \"animat\" → genres=[Animation].\n");
+        sb.append("- ACTORS: any person referenced by name as an actor → cast=[\"Full Name\"]. ");
+        sb.append("Examples: \"film cu Jackie Chan\" → cast=[\"Jackie Chan\"]; \"with Tom Hanks\" → cast=[\"Tom Hanks\"]; ");
+        sb.append("\"cu De Niro și Pacino\" → cast=[\"Robert De Niro\", \"Al Pacino\"]. ");
+        sb.append("Always use the FULL name as commonly known (\"Robert De Niro\", not \"De Niro\").\n\n");
+
+        sb.append("EXAMPLE — user says \"vreau ceva fun din anii 80\":\n");
+        sb.append("{\"wantsRecommendations\":true,\"minYear\":1980,\"maxYear\":1989,\"mood\":\"fun\"}\n\n");
+
+        sb.append("AVAILABLE GENRES (use EXACT spelling, case-sensitive — MovieLens taxonomy):\n");
+        sb.append("Action, Adventure, Animation, Children, Comedy, Crime, Documentary, Drama, Fantasy, ");
+        sb.append("Film-Noir, Horror, Musical, Mystery, Romance, Sci-Fi, Thriller, War, Western\n");
+        sb.append("(Note: use \"Sci-Fi\" not \"Science Fiction\"; \"Children\" not \"Family\"; \"Musical\" not \"Music\".)\n\n");
+
+        sb.append("FIELD MEANINGS:\n");
+        sb.append("- genres: movie must have AT LEAST ONE of these (OR logic)\n");
+        sb.append("- minYear / maxYear: release year bounds\n");
+        sb.append("- minRuntime / maxRuntime: in minutes\n");
+        sb.append("- mood: free-form descriptor like \"relaxant\", \"intens\", \"feel-good\" (used as context, not a hard filter)\n");
+        sb.append("- similarTo: list of movie titles the user referenced (e.g. \"like Inception\")\n\n");
+
+        if (profile != null && !profile.isEmpty()) {
+            sb.append("USER'S GENERAL PREFERENCES (context only — DO NOT add these as filters unless the user asks):\n");
+            sb.append("- Likes: ").append(String.join(", ", profile.getLikes())).append("\n");
+            sb.append("- Preferred themes: ").append(String.join(", ", profile.getPreferredThemes())).append("\n\n");
+        }
+
+        sb.append("Return ONLY the relevant fields as JSON. If the user is just chatting or hasn't asked for anything specific, return {}.");
+        return sb.toString();
+    }
+
+    @Override
     public LLMRerankReply chatAndRerank(
             List<ChatMessage> history,
             UserPreferenceProfileDto profile,
@@ -106,6 +191,10 @@ public class GeminiLLMService implements LLMService {
     }
 
     private String callGemini(List<ChatMessage> history, String systemInstructionText, Map<String, Object> schema) {
+        return callGemini(history, systemInstructionText, schema, 0.7);
+    }
+
+    private String callGemini(List<ChatMessage> history, String systemInstructionText, Map<String, Object> schema, double temperature) {
         List<GeminiContent> contents = new ArrayList<>();
         for (ChatMessage m : history) {
             String role = "assistant".equals(m.getRole()) ? "model" : "user";
@@ -119,7 +208,7 @@ public class GeminiLLMService implements LLMService {
         GeminiGenerationConfig genCfg = new GeminiGenerationConfig();
         genCfg.setResponseMimeType("application/json");
         genCfg.setResponseSchema(schema);
-        genCfg.setTemperature(0.7);
+        genCfg.setTemperature(temperature);
         body.setGenerationConfig(genCfg);
 
         GeminiResponse resp = geminiRestClient.post()

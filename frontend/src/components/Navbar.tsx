@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import './Navbar.css';
 
 export default function Navbar() {
-  const { isAuthenticated, username, logout } = useAuth();
+  const { isAuthenticated, username } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
 
@@ -31,10 +31,7 @@ export default function Navbar() {
 
       <div className="navbar-user">
         {isAuthenticated ? (
-          <>
-            <Link to="/profile" className="navbar-username">{username}</Link>
-            <button className="navbar-btn btn-logout" onClick={logout}>Logout</button>
-          </>
+          <Link to="/profile" className="navbar-username">{username}</Link>
         ) : (
           <Link to="/login" className="navbar-btn btn-login">Sign In</Link>
         )}

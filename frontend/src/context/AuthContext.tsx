@@ -39,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('token');
     localStorage.removeItem('username');
     localStorage.removeItem('userId');
+    localStorage.removeItem('chat-turns');
     setIsAuthenticated(false);
     setUsername(null);
     setUserId(null);
