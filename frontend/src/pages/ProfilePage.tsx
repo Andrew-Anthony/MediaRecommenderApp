@@ -238,6 +238,23 @@ export default function ProfilePage() {
           Sign Out
         </button>
       </div>
+
+      <div className="profile-section profile-credits" style={{ marginTop: 20 }}>
+        <div className="profile-section-title">Credits</div>
+        <div className="profile-credits-content">
+          <a
+            href="https://www.themoviedb.org/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="profile-credits-logo"
+          >
+            <img src="/tmdb-logo.svg" alt="TMDB" />
+          </a>
+          <p>
+            This product uses the TMDB API but is not endorsed or certified by TMDB.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
