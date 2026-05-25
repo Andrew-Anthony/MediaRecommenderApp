@@ -21,6 +21,7 @@ public class LLMIntentFilters {
     private Integer maxRuntime;
     private Integer minRuntime;
     private List<String> cast;
+    private List<String> director;
 
     private String mood;
     private List<String> similarTo;

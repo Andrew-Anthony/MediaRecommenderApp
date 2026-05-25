@@ -52,6 +52,7 @@ public class GeminiLLMService implements LLMService {
                     Map.entry("minRuntime", Map.of("type", "INTEGER")),
                     Map.entry("maxRuntime", Map.of("type", "INTEGER")),
                     Map.entry("cast", Map.of("type", "ARRAY", "items", Map.of("type", "STRING"))),
+                    Map.entry("director", Map.of("type", "ARRAY", "items", Map.of("type", "STRING"))),
                     Map.entry("mood", Map.of("type", "STRING")),
                     Map.entry("similarTo", Map.of("type", "ARRAY", "items", Map.of("type", "STRING")))
             ),
@@ -117,57 +118,67 @@ public class GeminiLLMService implements LLMService {
 
     private String buildIntentSystemInstruction(UserPreferenceProfileDto profile) {
         StringBuilder sb = new StringBuilder();
-        sb.append("You analyze the user's latest message (in conversation context) and extract HARD FILTERS ");
-        sb.append("that will be applied to narrow down the recommendation pool.\n\n");
+        sb.append("You extract movie recommendation filters from the user's message.\n\n");
 
-        sb.append("CRITICAL: ALWAYS set `wantsRecommendations`:\n");
-        sb.append("- true: user is asking for movie suggestions (\"recomandă\", \"vreau ceva\", \"caut un film\", \"give me a movie\", etc.)\n");
-        sb.append("- false: user is just chatting (\"salut\", \"mulțumesc\", \"cum funcționezi\", \"hello\", asking about the app, etc.)\n");
-        sb.append("If false, OMIT all other fields (no filtering needed for a chat reply).\n\n");
+        sb.append("ALWAYS include \"wantsRecommendations\":\n");
+        sb.append("- true: user wants movies suggested\n");
+        sb.append("- false: greetings, chitchat, questions about how you work (omit ALL other fields)\n\n");
 
-        sb.append("FILTER EXTRACTION RULES (only when wantsRecommendations=true):\n");
-        sb.append("- For fields NOT implied by the user, omit them.\n");
-        sb.append("- For fields the user DID imply, you MUST extract them — do not be overly cautious.\n\n");
+        sb.append("Fields to extract when wantsRecommendations=true (omit any field you don't extract):\n");
+        sb.append("- genres: from the exact list below\n");
+        sb.append("- minYear, maxYear: release year bounds\n");
+        sb.append("- minRuntime, maxRuntime: minutes\n");
+        sb.append("- cast: actor full names mentioned\n");
+        sb.append("- director: director full names mentioned (distinct from cast!)\n");
+        sb.append("- mood: free-form descriptor like \"fun\", \"dark\", \"relaxant\"\n");
+        sb.append("- similarTo: movie titles the user references\n\n");
 
-        sb.append("DECADE RULE (CRITICAL — always set BOTH bounds for a decade):\n");
-        sb.append("- \"anii 80\" / \"80s\" / \"the 80s\" / \"eighties\" → {\"minYear\":1980,\"maxYear\":1989}\n");
-        sb.append("- \"anii 90\" / \"90s\" / \"nineties\" → {\"minYear\":1990,\"maxYear\":1999}\n");
-        sb.append("- \"anii 2000\" / \"2000s\" → {\"minYear\":2000,\"maxYear\":2009}\n");
-        sb.append("- \"anii 70\" / \"70s\" → {\"minYear\":1970,\"maxYear\":1979}\n");
-        sb.append("- A decade reference is a STRICT bound. Setting only minYear is WRONG.\n\n");
-
-        sb.append("OTHER MAPPINGS:\n");
-        sb.append("- \"recent\" / \"new\" / \"din ultimii ani\" → minYear=2018 (no maxYear).\n");
-        sb.append("- \"old\" / \"clasice\" / \"vechi\" → maxYear=1990 (no minYear).\n");
-        sb.append("- \"short\" / \"scurt\" → maxRuntime=120; \"long\" / \"lung\" → minRuntime=150.\n");
-        sb.append("- \"animated\" / \"desene\" / \"animat\" → genres=[Animation].\n");
-        sb.append("- ACTORS: any person referenced by name as an actor → cast=[\"Full Name\"]. ");
-        sb.append("Examples: \"film cu Jackie Chan\" → cast=[\"Jackie Chan\"]; \"with Tom Hanks\" → cast=[\"Tom Hanks\"]; ");
-        sb.append("\"cu De Niro și Pacino\" → cast=[\"Robert De Niro\", \"Al Pacino\"]. ");
-        sb.append("Always use the FULL name as commonly known (\"Robert De Niro\", not \"De Niro\").\n\n");
-
-        sb.append("EXAMPLE — user says \"vreau ceva fun din anii 80\":\n");
-        sb.append("{\"wantsRecommendations\":true,\"minYear\":1980,\"maxYear\":1989,\"mood\":\"fun\"}\n\n");
-
-        sb.append("AVAILABLE GENRES (use EXACT spelling, case-sensitive — MovieLens taxonomy):\n");
+        sb.append("GENRES (exact spelling, MovieLens taxonomy — use \"Sci-Fi\" not \"Science Fiction\", \"Children\" not \"Family\", \"Musical\" not \"Music\"):\n");
         sb.append("Action, Adventure, Animation, Children, Comedy, Crime, Documentary, Drama, Fantasy, ");
-        sb.append("Film-Noir, Horror, Musical, Mystery, Romance, Sci-Fi, Thriller, War, Western\n");
-        sb.append("(Note: use \"Sci-Fi\" not \"Science Fiction\"; \"Children\" not \"Family\"; \"Musical\" not \"Music\".)\n\n");
+        sb.append("Film-Noir, Horror, Musical, Mystery, Romance, Sci-Fi, Thriller, War, Western\n\n");
 
-        sb.append("FIELD MEANINGS:\n");
-        sb.append("- genres: movie must have AT LEAST ONE of these (OR logic)\n");
-        sb.append("- minYear / maxYear: release year bounds\n");
-        sb.append("- minRuntime / maxRuntime: in minutes\n");
-        sb.append("- mood: free-form descriptor like \"relaxant\", \"intens\", \"feel-good\" (used as context, not a hard filter)\n");
-        sb.append("- similarTo: list of movie titles the user referenced (e.g. \"like Inception\")\n\n");
+        sb.append("EXAMPLES — study these patterns:\n\n");
+
+        sb.append("User: \"salut\"\n");
+        sb.append("{\"wantsRecommendations\": false}\n\n");
+
+        sb.append("User: \"vreau ceva fun din anii 80\"\n");
+        sb.append("{\"wantsRecommendations\": true, \"minYear\": 1980, \"maxYear\": 1989, \"mood\": \"fun\"}\n\n");
+
+        sb.append("User: \"recomandă-mi un thriller\"\n");
+        sb.append("{\"wantsRecommendations\": true, \"genres\": [\"Thriller\"]}\n\n");
+
+        sb.append("User: \"film de Tarantino cu DiCaprio\"\n");
+        sb.append("{\"wantsRecommendations\": true, \"director\": [\"Quentin Tarantino\"], \"cast\": [\"Leonardo DiCaprio\"]}\n\n");
+
+        sb.append("User: \"poti sa imi dai filme regizate de Tarantino in care joaca Uma Thurman\"\n");
+        sb.append("{\"wantsRecommendations\": true, \"director\": [\"Quentin Tarantino\"], \"cast\": [\"Uma Thurman\"]}\n\n");
+
+        sb.append("User: \"un anime relaxant\"\n");
+        sb.append("{\"wantsRecommendations\": true, \"genres\": [\"Animation\"], \"mood\": \"relaxant\"}\n\n");
+
+        sb.append("User: \"ceva ca Inception dar mai recent\"\n");
+        sb.append("{\"wantsRecommendations\": true, \"minYear\": 2018, \"similarTo\": [\"Inception\"]}\n\n");
+
+        sb.append("User: \"film de Miyazaki\"\n");
+        sb.append("{\"wantsRecommendations\": true, \"director\": [\"Hayao Miyazaki\"]}\n\n");
+
+        sb.append("User: \"un Western din anii 90\"\n");
+        sb.append("{\"wantsRecommendations\": true, \"genres\": [\"Western\"], \"minYear\": 1990, \"maxYear\": 1999}\n\n");
 
         if (profile != null && !profile.isEmpty()) {
-            sb.append("USER'S GENERAL PREFERENCES (context only — DO NOT add these as filters unless the user asks):\n");
+            sb.append("USER PROFILE (context only, do NOT auto-add as filters):\n");
             sb.append("- Likes: ").append(String.join(", ", profile.getLikes())).append("\n");
-            sb.append("- Preferred themes: ").append(String.join(", ", profile.getPreferredThemes())).append("\n\n");
+            sb.append("- Themes: ").append(String.join(", ", profile.getPreferredThemes())).append("\n\n");
         }
 
-        sb.append("Return ONLY the relevant fields as JSON. If the user is just chatting or hasn't asked for anything specific, return {}.");
+        sb.append("CRITICAL — read carefully before responding:\n");
+        sb.append("1. OMIT fields you don't extract. NEVER output null, 0, [], or \"\".\n");
+        sb.append("2. Extract ALL applicable filters. If user mentions BOTH an actor and a director, extract BOTH — they coexist.\n");
+        sb.append("3. NEVER invent year ranges. Only set year fields when user mentions a time period.\n");
+        sb.append("4. \"cu X\" / \"with X\" / \"joaca X\" / \"starring X\" → cast. \"regizat de X\" / \"de X\" / \"directed by X\" → director.\n");
+        sb.append("5. For decades always set BOTH bounds: \"anii 80\" → minYear=1980 AND maxYear=1989.\n");
+        sb.append("6. Use full actor/director names: \"Tarantino\" → \"Quentin Tarantino\"; \"Nolan\" → \"Christopher Nolan\".\n");
         return sb.toString();
     }
 

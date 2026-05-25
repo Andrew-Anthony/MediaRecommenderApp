@@ -132,13 +132,22 @@ def train_model():
             genres_set = {g for g in raw_genres.split("|") if g}
 
         cast_set = set()
+        director_str = None
         meta = tmdb_metadata.get(movielens_id) if tmdb_metadata else None
         if meta:
             for actor in meta.get("cast", []) or []:
                 if actor:
                     cast_set.add(actor.lower())
+            director_raw = meta.get("director")
+            if director_raw:
+                director_str = director_raw.lower()
 
-        movie_attributes[movielens_id] = {"year": year, "genres": genres_set, "cast": cast_set}
+        movie_attributes[movielens_id] = {
+            "year": year,
+            "genres": genres_set,
+            "cast": cast_set,
+            "director": director_str,
+        }
 
     movielens_id_to_row = {mid: idx for idx, mid in enumerate(movielens_ids)}
 
@@ -184,6 +193,7 @@ def get_hybrid_recommendations(user_ratings, n=10, svd_weight=0.6, content_weigh
     filter_min_year = filters.get("minYear")
     filter_max_year = filters.get("maxYear")
     filter_cast = [c.lower() for c in (filters.get("cast") or []) if c]
+    filter_director = [d.lower() for d in (filters.get("director") or []) if d]
 
     excluded_movielens_ids = set()
     for r in user_ratings:
@@ -230,6 +240,12 @@ def get_hybrid_recommendations(user_ratings, n=10, svd_weight=0.6, content_weigh
             if not movie_cast:
                 continue
             if not any(fc in actor for fc in filter_cast for actor in movie_cast):
+                continue
+        if filter_director:
+            movie_director = attrs.get("director") if attrs else None
+            if not movie_director:
+                continue
+            if not any(fd in movie_director for fd in filter_director):
                 continue
 
         svd_raw = model.predict(svd_user_id, movie_id).est

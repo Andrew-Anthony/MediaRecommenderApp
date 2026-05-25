@@ -27,7 +27,7 @@ public class ChatService {
 
     private static final int CANDIDATE_POOL = 50;
     private static final int RESULT_LIMIT_MAX = 8;
-    private static final int RESULT_LIMIT_MIN = 3;
+    private static final int RESULT_LIMIT_MIN = 1;
     private static final double QUALITY_THRESHOLD = 7.0;
     private static final int TOP_RATINGS_LIMIT = 10;
     private static final int WATCHLIST_LIMIT = 20;
@@ -37,6 +37,12 @@ public class ChatService {
 
     private static final Pattern DECADE_RO = Pattern.compile("anii\\s+(\\d{2,4})", Pattern.CASE_INSENSITIVE);
     private static final Pattern DECADE_EN = Pattern.compile("\\b(?:the\\s+)?(\\d{2,4})s\\b", Pattern.CASE_INSENSITIVE);
+    private static final Pattern ACTOR_REFERENCE = Pattern.compile(
+            "\\b(?:cu|joacă|joaca|în care joacă|în care joaca|with|starring|featuring|stars)\\s+[A-ZȘȚĂÂÎ]",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE
+    );
+    private static final String SEARCH_HINT =
+            "\n\n💡 Pentru combinații atât de specifice, pagina Search poate fi mai precisă.";
 
     private final RecommendationService recommendationService;
     private final PreferenceProfileService profileService;
@@ -51,6 +57,7 @@ public class ChatService {
         boolean wantsRecommendations = Boolean.TRUE.equals(filters.getWantsRecommendations());
 
         if (wantsRecommendations) {
+            sanitizeFilters(filters);
             applyDecadeOverride(filters, lastUserMessage(history));
         }
 
@@ -59,6 +66,7 @@ public class ChatService {
                 + ", year=[" + filters.getMinYear() + "," + filters.getMaxYear() + "]"
                 + ", runtime=[" + filters.getMinRuntime() + "," + filters.getMaxRuntime() + "]"
                 + ", cast=" + filters.getCast()
+                + ", director=" + filters.getDirector()
                 + ", mood=" + filters.getMood()
                 + ", similarTo=" + filters.getSimilarTo());
 
@@ -75,7 +83,33 @@ public class ChatService {
         List<MovieResponse> ranked = wantsRecommendations
                 ? mergeAndRank(candidates, llmReply.getRerank())
                 : List.of();
-        return new ChatResponse(llmReply.getReply(), ranked);
+
+        String reply = llmReply.getReply();
+        if (wantsRecommendations && isNarrowRequest(filters, lastUserMessage(history))) {
+            reply = reply + SEARCH_HINT;
+        }
+        return new ChatResponse(reply, ranked);
+    }
+
+    private void sanitizeFilters(LLMIntentFilters filters) {
+        if (filters.getMinYear() != null && filters.getMinYear() <= 0) filters.setMinYear(null);
+        if (filters.getMaxYear() != null && filters.getMaxYear() <= 0) filters.setMaxYear(null);
+        if (filters.getMinRuntime() != null && filters.getMinRuntime() <= 0) filters.setMinRuntime(null);
+        if (filters.getMaxRuntime() != null && filters.getMaxRuntime() <= 0) filters.setMaxRuntime(null);
+        if (filters.getMood() != null && filters.getMood().isBlank()) filters.setMood(null);
+        if (filters.getGenres() != null && filters.getGenres().isEmpty()) filters.setGenres(null);
+        if (filters.getCast() != null && filters.getCast().isEmpty()) filters.setCast(null);
+        if (filters.getDirector() != null && filters.getDirector().isEmpty()) filters.setDirector(null);
+        if (filters.getSimilarTo() != null && filters.getSimilarTo().isEmpty()) filters.setSimilarTo(null);
+    }
+
+    private boolean isNarrowRequest(LLMIntentFilters filters, String lastMessage) {
+        boolean castSet = filters.getCast() != null && !filters.getCast().isEmpty();
+        boolean directorSet = filters.getDirector() != null && !filters.getDirector().isEmpty();
+
+        if (castSet && directorSet) return true;
+
+        return directorSet && lastMessage != null && ACTOR_REFERENCE.matcher(lastMessage).find();
     }
 
     private List<MovieResponse> mergeAndRank(List<MovieResponse> candidates, List<RerankItem> rerank) {
@@ -114,7 +148,7 @@ public class ChatService {
                 .limit(RESULT_LIMIT_MAX)
                 .toList();
 
-        if (highQuality.size() >= RESULT_LIMIT_MIN) {
+        if (!highQuality.isEmpty()) {
             return highQuality;
         }
         return sorted.stream().limit(RESULT_LIMIT_MIN).toList();

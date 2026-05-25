@@ -158,20 +158,14 @@ export default function ChatPage() {
           <div className="chat-empty">
             <h2>Salut! 👋</h2>
             <p>
-              Întreabă-mă orice despre filme. Folosesc watchlist-ul, rating-urile și
-              review-urile tale ca să-ți recomand exact ce ți s-ar potrivi.
+              Sunt aici să te ajut să găsești filme potrivite <strong>gusturilor tale</strong>.
+              Folosesc watchlist-ul, rating-urile și review-urile tale ca să-ți recomand
+              ce ți s-ar potrivi cel mai bine.
             </p>
-            <div className="chat-suggestions">
-              <button onClick={() => setInput('Recomandă-mi un thriller psihologic')}>
-                Recomandă-mi un thriller psihologic
-              </button>
-              <button onClick={() => setInput('Vreau ceva ca Inception dar mai relaxant')}>
-                Vreau ceva ca Inception dar mai relaxant
-              </button>
-              <button onClick={() => setInput('Ce filme bune au ieșit recent?')}>
-                Ce filme bune au ieșit recent?
-              </button>
-            </div>
+            <p className="chat-empty-hint">
+              Pentru căutări foarte specifice (un titlu exact, un actor anume + un regizor anume),
+              pagina <strong>Search</strong> e mai precisă.
+            </p>
           </div>
         )}
 

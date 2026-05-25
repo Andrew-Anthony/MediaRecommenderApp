@@ -73,6 +73,9 @@ public class RecommendationService {
             if (filters.getCast() != null && !filters.getCast().isEmpty()) {
                 filtersPayload.put("cast", filters.getCast());
             }
+            if (filters.getDirector() != null && !filters.getDirector().isEmpty()) {
+                filtersPayload.put("director", filters.getDirector());
+            }
             if (!filtersPayload.isEmpty()) {
                 requestBody.put("filters", filtersPayload);
             }

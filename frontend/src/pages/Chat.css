@@ -243,6 +243,22 @@
   margin-top: 8px;
 }
 
+.chat-empty-hint {
+  font-size: 13px !important;
+  color: var(--text-muted) !important;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 10px 16px;
+  margin: 8px auto 24px !important;
+  max-width: 480px;
+  text-align: center;
+}
+
+.chat-empty-hint strong {
+  color: var(--text-secondary);
+}
+
 .chat-tip-subtle {
   font-size: 12.5px;
   color: var(--text-muted);
