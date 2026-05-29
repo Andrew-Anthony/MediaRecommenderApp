@@ -34,9 +34,19 @@ public class ChatService {
     private static final double PYTHON_WEIGHT = 0.5;
     private static final double GEMINI_WEIGHT = 0.5;
     private static final double NEUTRAL_GEMINI_SCORE = 5.0;
+    private static final double MIN_TMDB_RATING = 6.5;
 
     private static final Pattern DECADE_RO = Pattern.compile("anii\\s+(\\d{2,4})", Pattern.CASE_INSENSITIVE);
     private static final Pattern DECADE_EN = Pattern.compile("\\b(?:the\\s+)?(\\d{2,4})s\\b", Pattern.CASE_INSENSITIVE);
+    private static final Pattern BEFORE_YEAR = Pattern.compile(
+            "(?:înainte de|inainte de|before|older than|prior to|până în|pana in|pre-?)\\s*(\\d{4})",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+    private static final Pattern AFTER_YEAR = Pattern.compile(
+            "(?:după|dupa|after|since|newer than|later than|de la|peste|începând cu|incepand cu|post-?)\\s*(\\d{4})",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+    private static final Pattern EXACT_YEAR = Pattern.compile(
+            "(?:din anul|din|în|in|from|of|anul|prin|during|released in)\\s+(\\d{4})",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
     private static final Pattern ACTOR_REFERENCE = Pattern.compile(
             "\\b(?:cu|joacă|joaca|în care joacă|în care joaca|with|starring|featuring|stars)\\s+[A-ZȘȚĂÂÎ]",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE
@@ -58,7 +68,7 @@ public class ChatService {
 
         if (wantsRecommendations) {
             sanitizeFilters(filters);
-            applyDecadeOverride(filters, lastUserMessage(history));
+            applyYearOverrides(filters, lastUserMessage(history));
         }
 
         System.out.println("[Chat] Extracted intent: wantsRecs=" + wantsRecommendations
@@ -67,11 +77,12 @@ public class ChatService {
                 + ", runtime=[" + filters.getMinRuntime() + "," + filters.getMaxRuntime() + "]"
                 + ", cast=" + filters.getCast()
                 + ", director=" + filters.getDirector()
+                + ", keywords=" + filters.getKeywords()
                 + ", mood=" + filters.getMood()
                 + ", similarTo=" + filters.getSimilarTo());
 
         List<MovieResponse> candidates = wantsRecommendations
-                ? recommendationService.getCandidates(userId, CANDIDATE_POOL, false, filters)
+                ? recommendationService.getCandidates(userId, CANDIDATE_POOL, true, filters)
                 : List.of();
 
         String topRatingsText = formatTopRatings(userId);
@@ -100,6 +111,8 @@ public class ChatService {
         if (filters.getGenres() != null && filters.getGenres().isEmpty()) filters.setGenres(null);
         if (filters.getCast() != null && filters.getCast().isEmpty()) filters.setCast(null);
         if (filters.getDirector() != null && filters.getDirector().isEmpty()) filters.setDirector(null);
+        if (filters.getKeywords() != null && filters.getKeywords().isEmpty()) filters.setKeywords(null);
+        if (filters.getKeywords() != null && filters.getKeywords().size() > 4) filters.setKeywords(null);
         if (filters.getSimilarTo() != null && filters.getSimilarTo().isEmpty()) filters.setSimilarTo(null);
     }
 
@@ -113,6 +126,10 @@ public class ChatService {
     }
 
     private List<MovieResponse> mergeAndRank(List<MovieResponse> candidates, List<RerankItem> rerank) {
+        candidates = candidates.stream()
+                .filter(m -> m.getVoteAverage() != null && m.getVoteAverage() >= MIN_TMDB_RATING)
+                .toList();
+
         if (candidates.isEmpty()) {
             return List.of();
         }
@@ -174,13 +191,48 @@ public class ChatService {
         return null;
     }
 
-    private void applyDecadeOverride(LLMIntentFilters filters, String message) {
+    private void applyYearOverrides(LLMIntentFilters filters, String message) {
         if (message == null) return;
-        Integer decadeStart = detectDecadeStart(message);
-        if (decadeStart == null) return;
 
-        filters.setMinYear(decadeStart);
-        filters.setMaxYear(decadeStart + 9);
+        Integer decadeStart = detectDecadeStart(message);
+        if (decadeStart != null) {
+            filters.setMinYear(decadeStart);
+            filters.setMaxYear(decadeStart + 9);
+            return;
+        }
+
+        Matcher before = BEFORE_YEAR.matcher(message);
+        if (before.find()) {
+            int y = Integer.parseInt(before.group(1));
+            if (isValidYear(y)) {
+                filters.setMinYear(null);
+                filters.setMaxYear(y);
+            }
+            return;
+        }
+
+        Matcher after = AFTER_YEAR.matcher(message);
+        if (after.find()) {
+            int y = Integer.parseInt(after.group(1));
+            if (isValidYear(y)) {
+                filters.setMinYear(y);
+                filters.setMaxYear(null);
+            }
+            return;
+        }
+
+        Matcher exact = EXACT_YEAR.matcher(message);
+        if (exact.find()) {
+            int y = Integer.parseInt(exact.group(1));
+            if (isValidYear(y)) {
+                filters.setMinYear(y);
+                filters.setMaxYear(y);
+            }
+        }
+    }
+
+    private boolean isValidYear(int y) {
+        return y >= 1900 && y <= 2029;
     }
 
     private Integer detectDecadeStart(String text) {

@@ -10,8 +10,9 @@ from sklearn.metrics.pairwise import cosine_similarity
 from surprise import Dataset, Reader, SVD
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(BASE_DIR, "data", "ml-latest-small")
+DATA_DIR = os.path.join(BASE_DIR, "data", "ml-32m")
 METADATA_PATH = os.path.join(BASE_DIR, "data", "tmdb_metadata.pkl")
+TRAINED_CACHE_PATH = os.path.join(BASE_DIR, "data", "trained_model.pkl")
 
 model = None
 ratings_df = None
@@ -26,7 +27,10 @@ movie_attributes = {}  # movielens_id -> {"year": int|None, "genres": set[str]}
 _YEAR_RE = re.compile(r"\((\d{4})\)")
 
 MIN_MEAN_RATING = 3.5  # ~7/10 on the app's 1-10 scale
-MIN_RATING_COUNT = 10  # minimum ratings to consider the mean reliable
+MIN_RATING_COUNT = 50  # minimum MovieLens ratings for a reliable mean (bumped for ml-32m scale)
+KEYWORD_BOOST = 0.25  # additive boost to hybrid score when a candidate matches requested TMDB keywords
+RECENCY_BOOST = 0.085  # additive boost for recent films to counteract collaborative-filtering age bias
+RECENT_YEAR_THRESHOLD = 2016
 
 
 def _norm_token(s):
@@ -81,10 +85,55 @@ def _load_tmdb_metadata():
     return valid
 
 
+def _save_cache():
+    print(f"[Cache] Saving trained model to {TRAINED_CACHE_PATH}...")
+    payload = {
+        "model": model,
+        "links_df": links_df,
+        "tfidf_matrix": tfidf_matrix,
+        "movielens_id_to_row": movielens_id_to_row,
+        "tmdb_to_movielens": tmdb_to_movielens,
+        "movie_quality": movie_quality,
+        "movie_attributes": movie_attributes,
+    }
+    with open(TRAINED_CACHE_PATH, "wb") as f:
+        pickle.dump(payload, f, protocol=pickle.HIGHEST_PROTOCOL)
+    size_mb = os.path.getsize(TRAINED_CACHE_PATH) / (1024 * 1024)
+    print(f"[Cache] Saved ({size_mb:.1f} MB).")
+
+
+def _load_cache():
+    global model, links_df, tfidf_matrix
+    global movielens_id_to_row, tmdb_to_movielens, movie_quality, movie_attributes
+
+    print(f"[Cache] Loading trained model from {TRAINED_CACHE_PATH}...")
+    with open(TRAINED_CACHE_PATH, "rb") as f:
+        payload = pickle.load(f)
+    model = payload["model"]
+    links_df = payload["links_df"]
+    tfidf_matrix = payload["tfidf_matrix"]
+    movielens_id_to_row = payload["movielens_id_to_row"]
+    tmdb_to_movielens = payload["tmdb_to_movielens"]
+    movie_quality = payload["movie_quality"]
+    movie_attributes = payload["movie_attributes"]
+    print(f"[Cache] Loaded: {tfidf_matrix.shape[0]} movies, "
+          f"{len(tmdb_to_movielens)} TMDB mappings, "
+          f"{sum(1 for m, c in movie_quality.values() if m >= MIN_MEAN_RATING and c >= MIN_RATING_COUNT)} quality-filtered.")
+    print(f"[Cache] To force retraining, delete {TRAINED_CACHE_PATH}")
+
+
 def train_model():
     global model, ratings_df, movies_df, links_df, tmdb_metadata
     global tfidf_matrix, movielens_id_to_row, tmdb_to_movielens, movie_quality, movie_attributes
 
+    if os.path.exists(TRAINED_CACHE_PATH):
+        try:
+            _load_cache()
+            return
+        except Exception as e:
+            print(f"[Cache] Failed to load ({e}). Falling back to full training...")
+
+    print(f"[Train] Starting full training (data: {DATA_DIR})...")
     ratings_df = pd.read_csv(os.path.join(DATA_DIR, "ratings.csv"))
     movies_df = pd.read_csv(os.path.join(DATA_DIR, "movies.csv"))
     links_df = pd.read_csv(os.path.join(DATA_DIR, "links.csv"))
@@ -101,7 +150,7 @@ def train_model():
     data = Dataset.load_from_df(ratings_df[["userId", "movieId", "rating"]], reader)
     trainset = data.build_full_trainset()
 
-    model = SVD()
+    model = SVD(n_factors=50)
     model.fit(trainset)
     print(f"[SVD] Trained on {trainset.n_users} users and {trainset.n_items} movies")
 
@@ -133,6 +182,7 @@ def train_model():
 
         cast_set = set()
         director_str = None
+        keywords_set = set()
         meta = tmdb_metadata.get(movielens_id) if tmdb_metadata else None
         if meta:
             for actor in meta.get("cast", []) or []:
@@ -141,19 +191,25 @@ def train_model():
             director_raw = meta.get("director")
             if director_raw:
                 director_str = director_raw.lower()
+            for kw in meta.get("keywords", []) or []:
+                if kw:
+                    keywords_set.add(kw.lower())
 
         movie_attributes[movielens_id] = {
             "year": year,
             "genres": genres_set,
             "cast": cast_set,
             "director": director_str,
+            "keywords": keywords_set,
         }
 
     movielens_id_to_row = {mid: idx for idx, mid in enumerate(movielens_ids)}
 
-    vectorizer = TfidfVectorizer(token_pattern=r"\S+", min_df=2)
+    vectorizer = TfidfVectorizer(token_pattern=r"\S+", min_df=2, max_features=50000)
     tfidf_matrix = vectorizer.fit_transform(soups)
     print(f"[Content] TF-IDF matrix: {tfidf_matrix.shape[0]} movies x {tfidf_matrix.shape[1]} features")
+
+    _save_cache()
 
 
 def _build_user_feature_profile(user_ratings):
@@ -194,6 +250,7 @@ def get_hybrid_recommendations(user_ratings, n=10, svd_weight=0.6, content_weigh
     filter_max_year = filters.get("maxYear")
     filter_cast = [c.lower() for c in (filters.get("cast") or []) if c]
     filter_director = [d.lower() for d in (filters.get("director") or []) if d]
+    filter_keywords = [k.lower() for k in (filters.get("keywords") or []) if k]
 
     excluded_movielens_ids = set()
     for r in user_ratings:
@@ -248,10 +305,17 @@ def get_hybrid_recommendations(user_ratings, n=10, svd_weight=0.6, content_weigh
             if not any(fd in movie_director for fd in filter_director):
                 continue
 
+        keyword_match = False
+        if filter_keywords:
+            movie_keywords = attrs.get("keywords", set()) if attrs else set()
+            keyword_match = any(fk in mk for fk in filter_keywords for mk in movie_keywords)
+
+        recent_match = bool(attrs and attrs["year"] is not None and attrs["year"] >= RECENT_YEAR_THRESHOLD)
+
         svd_raw = model.predict(svd_user_id, movie_id).est
         svd_score = (svd_raw - 0.5) / 4.5
         cb_score = float(cb_raw[row_idx])
-        candidate_data.append((int(movie_id), svd_score, cb_score))
+        candidate_data.append((int(movie_id), svd_score, cb_score, keyword_match, recent_match))
 
     if candidate_data:
         cb_vals = np.array([c[2] for c in candidate_data])
@@ -264,8 +328,12 @@ def get_hybrid_recommendations(user_ratings, n=10, svd_weight=0.6, content_weigh
         cb_norm = np.array([])
 
     predictions = []
-    for (movie_id, svd_score, _), cb in zip(candidate_data, cb_norm):
+    for (movie_id, svd_score, _, keyword_match, recent_match), cb in zip(candidate_data, cb_norm):
         hybrid = svd_weight * svd_score + content_weight * float(cb)
+        if keyword_match:
+            hybrid = min(1.0, hybrid + KEYWORD_BOOST)
+        if recent_match:
+            hybrid = min(1.0, hybrid + RECENCY_BOOST)
         predicted_rating = round(5 + 5 * hybrid)
 
         predictions.append({

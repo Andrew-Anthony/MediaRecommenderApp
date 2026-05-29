@@ -76,6 +76,9 @@ public class RecommendationService {
             if (filters.getDirector() != null && !filters.getDirector().isEmpty()) {
                 filtersPayload.put("director", filters.getDirector());
             }
+            if (filters.getKeywords() != null && !filters.getKeywords().isEmpty()) {
+                filtersPayload.put("keywords", filters.getKeywords());
+            }
             if (!filtersPayload.isEmpty()) {
                 requestBody.put("filters", filtersPayload);
             }

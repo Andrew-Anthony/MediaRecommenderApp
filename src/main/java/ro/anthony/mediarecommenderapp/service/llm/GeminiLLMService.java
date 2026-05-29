@@ -53,6 +53,7 @@ public class GeminiLLMService implements LLMService {
                     Map.entry("maxRuntime", Map.of("type", "INTEGER")),
                     Map.entry("cast", Map.of("type", "ARRAY", "items", Map.of("type", "STRING"))),
                     Map.entry("director", Map.of("type", "ARRAY", "items", Map.of("type", "STRING"))),
+                    Map.entry("keywords", Map.of("type", "ARRAY", "items", Map.of("type", "STRING"))),
                     Map.entry("mood", Map.of("type", "STRING")),
                     Map.entry("similarTo", Map.of("type", "ARRAY", "items", Map.of("type", "STRING")))
             ),
@@ -130,6 +131,7 @@ public class GeminiLLMService implements LLMService {
         sb.append("- minRuntime, maxRuntime: minutes\n");
         sb.append("- cast: actor full names mentioned\n");
         sb.append("- director: director full names mentioned (distinct from cast!)\n");
+        sb.append("- keywords: thematic/sub-genre terms in English ONLY when the user's CURRENT MESSAGE explicitly names a sub-genre or theme (e.g. \"psychological thriller\" → [\"psychological\"], \"time travel\" → [\"time travel\"], \"heist\" → [\"heist\"]). NEVER derive keywords from the user's profile/taste. For a generic request like \"recommend something for me\" / \"ceva pentru gusturile mele\", leave keywords EMPTY (the profile is applied separately by the system). Usually 1-2 keywords, never more than 3.\n");
         sb.append("- mood: free-form descriptor like \"fun\", \"dark\", \"relaxant\"\n");
         sb.append("- similarTo: movie titles the user references\n\n");
 
@@ -147,6 +149,16 @@ public class GeminiLLMService implements LLMService {
 
         sb.append("User: \"recomandă-mi un thriller\"\n");
         sb.append("{\"wantsRecommendations\": true, \"genres\": [\"Thriller\"]}\n\n");
+
+        sb.append("User: \"un thriller psihologic\"\n");
+        sb.append("{\"wantsRecommendations\": true, \"genres\": [\"Thriller\"], \"keywords\": [\"psychological\"]}\n\n");
+
+        sb.append("User: \"ceva cu calatorii in timp\"\n");
+        sb.append("{\"wantsRecommendations\": true, \"keywords\": [\"time travel\"]}\n\n");
+
+        sb.append("User: \"recomandă-mi ceva pentru gusturile mele\"\n");
+        sb.append("{\"wantsRecommendations\": true}\n");
+        sb.append("(generic taste request — NO keywords, NO genres; the profile is applied separately)\n\n");
 
         sb.append("User: \"film de Tarantino cu DiCaprio\"\n");
         sb.append("{\"wantsRecommendations\": true, \"director\": [\"Quentin Tarantino\"], \"cast\": [\"Leonardo DiCaprio\"]}\n\n");
@@ -179,6 +191,7 @@ public class GeminiLLMService implements LLMService {
         sb.append("4. \"cu X\" / \"with X\" / \"joaca X\" / \"starring X\" → cast. \"regizat de X\" / \"de X\" / \"directed by X\" → director.\n");
         sb.append("5. For decades always set BOTH bounds: \"anii 80\" → minYear=1980 AND maxYear=1989.\n");
         sb.append("6. Use full actor/director names: \"Tarantino\" → \"Quentin Tarantino\"; \"Nolan\" → \"Christopher Nolan\".\n");
+        sb.append("7. keywords come ONLY from explicit themes in the user's message, NEVER from the profile. A generic taste request has NO keywords.\n");
         return sb.toString();
     }
 
@@ -248,7 +261,7 @@ public class GeminiLLMService implements LLMService {
     ) {
         StringBuilder sb = new StringBuilder();
         sb.append("You are a personalized movie recommendation assistant.\n");
-        sb.append("Always reply in the same language the user wrote in (Romanian if they write Romanian, English if English, etc.).\n\n");
+        sb.append("Detect the language of the user's most recent message and write your entire reply in that exact same language. Match it, never translate it.\n\n");
 
         sb.append("USER PREFERENCE PROFILE:\n");
         if (profile == null || profile.isEmpty()) {
@@ -291,6 +304,7 @@ public class GeminiLLMService implements LLMService {
         sb.append("Use the full range: 0-3 = poor fit, 4-6 = neutral, 7-8 = good fit, 9-10 = excellent fit. ");
         sb.append("Include a short 'reason' (max 1 sentence) for each.\n");
         sb.append("3. If there are no candidates, return an empty rerank list and just reply conversationally.\n");
+        sb.append("4. The CURRENT REQUEST overrides the general profile: a candidate that doesn't genuinely match the requested genre/mood scores 0-3, even if it fits the user's taste or has a high rating. Genre tags are loose — judge the actual film (e.g. \"psychological thriller\" → Harry Potter = 0-3).\n");
         return sb.toString();
     }
 }

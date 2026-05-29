@@ -22,6 +22,7 @@ public class LLMIntentFilters {
     private Integer minRuntime;
     private List<String> cast;
     private List<String> director;
+    private List<String> keywords;
 
     private String mood;
     private List<String> similarTo;

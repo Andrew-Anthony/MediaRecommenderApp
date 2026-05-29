@@ -7,7 +7,7 @@ import pandas as pd
 import requests
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(BASE_DIR, "data", "ml-latest-small")
+DATA_DIR = os.path.join(BASE_DIR, "data", "ml-32m")
 CACHE_PATH = os.path.join(BASE_DIR, "data", "tmdb_metadata.pkl")
 
 TMDB_BASE_URL = "https://api.themoviedb.org/3"
