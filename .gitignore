@@ -47,3 +47,6 @@ recommendation-service/__pycache__/
 ### Frontend ###
 frontend/node_modules/
 frontend/dist/
+
+### MacOS ###
+.DS_Store
