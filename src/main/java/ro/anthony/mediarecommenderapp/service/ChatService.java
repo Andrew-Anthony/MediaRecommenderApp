@@ -54,10 +54,13 @@ public class ChatService {
     private static final String SEARCH_HINT =
             "\n\n💡 Pentru combinații atât de specifice, pagina Search poate fi mai precisă.";
 
+    private static final int RECENT_FEEDBACK_LIMIT = 10;
+
     private final RecommendationService recommendationService;
     private final PreferenceProfileService profileService;
     private final RatingService ratingService;
     private final WatchlistService watchlistService;
+    private final ChatFeedbackService chatFeedbackService;
     private final LLMService llmService;
 
     public ChatResponse chat(Long userId, List<ChatMessage> history) {
@@ -87,9 +90,11 @@ public class ChatService {
 
         String topRatingsText = formatTopRatings(userId);
         String watchlistText = formatWatchlist(userId);
+        String feedbackText = chatFeedbackService.formatForPrompt(userId, RECENT_FEEDBACK_LIMIT);
+        System.out.println("[Chat] Recent feedback context:\n" + (feedbackText.isBlank() ? "(none)" : feedbackText));
 
         LLMRerankReply llmReply = llmService.chatAndRerank(
-                history, profile, watchlistText, topRatingsText, candidates);
+                history, profile, watchlistText, topRatingsText, feedbackText, candidates);
 
         List<MovieResponse> ranked = wantsRecommendations
                 ? mergeAndRank(candidates, llmReply.getRerank())

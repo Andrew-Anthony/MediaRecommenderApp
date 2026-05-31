@@ -3,12 +3,16 @@ import './MovieCard.css';
 
 const TMDB_BACKDROP_BASE = 'https://image.tmdb.org/t/p/w780';
 
+export type FeedbackSignal = 'POSITIVE' | 'NEGATIVE';
+
 interface MovieCardProps {
   movie: Movie;
   onClick?: (movie: Movie) => void;
+  feedback?: FeedbackSignal | null;
+  onFeedback?: (signal: FeedbackSignal) => void;
 }
 
-export default function MovieCard({ movie, onClick }: MovieCardProps) {
+export default function MovieCard({ movie, onClick, feedback, onFeedback }: MovieCardProps) {
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : '';
   const imageUrl = movie.backdropPath
     ? `${TMDB_BACKDROP_BASE}${movie.backdropPath}`
@@ -40,6 +44,26 @@ export default function MovieCard({ movie, onClick }: MovieCardProps) {
             <span className="movie-card-predicted">AI {movie.predictedRating}⭐</span>
           )}
         </div>
+        {onFeedback && (
+          <div className="movie-card-feedback">
+            <button
+              type="button"
+              className={`movie-card-feedback-btn ${feedback === 'POSITIVE' ? 'active-positive' : ''}`}
+              onClick={(e) => { e.stopPropagation(); onFeedback('POSITIVE'); }}
+              aria-label="Îmi place recomandarea"
+            >
+              👍
+            </button>
+            <button
+              type="button"
+              className={`movie-card-feedback-btn ${feedback === 'NEGATIVE' ? 'active-negative' : ''}`}
+              onClick={(e) => { e.stopPropagation(); onFeedback('NEGATIVE'); }}
+              aria-label="Nu îmi place recomandarea"
+            >
+              👎
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

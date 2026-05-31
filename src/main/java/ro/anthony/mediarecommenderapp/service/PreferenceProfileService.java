@@ -23,6 +23,7 @@ public class PreferenceProfileService {
 
     private final UserPreferenceProfileRepository repo;
     private final RatingService ratingService;
+    private final ChatFeedbackService chatFeedbackService;
     private final LLMService llmService;
     private final UserService userService;
     private final ObjectMapper objectMapper;
@@ -32,21 +33,29 @@ public class PreferenceProfileService {
                 .filter(r -> r.getReview() != null && !r.getReview().isBlank())
                 .toList();
         int currentReviewCount = reviewedRatings.size();
+        int currentFeedbackCount = chatFeedbackService.getByUser(userId).size();
+        int currentSignalCount = currentReviewCount + currentFeedbackCount;
 
         Optional<UserPreferenceProfile> cached = repo.findById(userId);
         if (cached.isPresent()
-                && Math.abs(currentReviewCount - cached.get().getReviewCountAtGeneration()) < REGENERATION_THRESHOLD) {
+                && Math.abs(currentSignalCount - cachedSignalCount(cached.get())) < REGENERATION_THRESHOLD) {
             return deserialize(cached.get());
         }
 
-        if (reviewedRatings.isEmpty()) {
+        if (reviewedRatings.isEmpty() && currentFeedbackCount == 0) {
             return UserPreferenceProfileDto.empty();
         }
 
         String reviewsText = formatReviewsForLLM(reviewedRatings);
-        UserPreferenceProfileDto generated = llmService.generateProfile(reviewsText);
-        save(userId, generated, currentReviewCount);
+        String feedbackText = chatFeedbackService.formatForPrompt(userId, 0);
+        UserPreferenceProfileDto generated = llmService.generateProfile(reviewsText, feedbackText);
+        save(userId, generated, currentReviewCount, currentFeedbackCount);
         return generated;
+    }
+
+    private int cachedSignalCount(UserPreferenceProfile entity) {
+        int feedback = entity.getFeedbackCountAtGeneration() == null ? 0 : entity.getFeedbackCountAtGeneration();
+        return entity.getReviewCountAtGeneration() + feedback;
     }
 
     private String formatReviewsForLLM(List<Rating> reviewedRatings) {
@@ -59,7 +68,7 @@ public class PreferenceProfileService {
         return sb.toString();
     }
 
-    private void save(Long userId, UserPreferenceProfileDto dto, int reviewCount) {
+    private void save(Long userId, UserPreferenceProfileDto dto, int reviewCount, int feedbackCount) {
         UserPreferenceProfile entity = repo.findById(userId).orElseGet(() -> {
             UserPreferenceProfile newEntity = new UserPreferenceProfile();
             User user = userService.getUserById(userId);
@@ -75,6 +84,7 @@ public class PreferenceProfileService {
             throw new RuntimeException("Failed to serialize preference profile", e);
         }
         entity.setReviewCountAtGeneration(reviewCount);
+        entity.setFeedbackCountAtGeneration(feedbackCount);
         repo.save(entity);
     }
 

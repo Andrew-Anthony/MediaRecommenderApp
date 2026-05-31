@@ -25,6 +25,7 @@ public class RecommendationService {
     private final TmdbService tmdbService;
     private final RatingService ratingService;
     private final WatchlistService watchlistService;
+    private final ChatFeedbackService chatFeedbackService;
 
     public List<MovieResponse> getRecommendations(Long userId, int n) {
         return getCandidates(userId, n, true);
@@ -54,6 +55,8 @@ public class RecommendationService {
         for (WatchlistItem item : watchlistItems) {
             excludeTmdbIds.add(item.getMovie().getTmdbId().intValue());
         }
+
+        excludeTmdbIds.addAll(chatFeedbackService.getDislikedTmdbIds(userId));
 
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("ratings", ratingsPayload);

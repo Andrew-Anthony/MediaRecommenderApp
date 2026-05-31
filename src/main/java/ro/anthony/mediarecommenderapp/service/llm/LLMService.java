@@ -9,7 +9,7 @@ import ro.anthony.mediarecommenderapp.dto.chat.UserPreferenceProfileDto;
 import java.util.List;
 
 public interface LLMService {
-    UserPreferenceProfileDto generateProfile(String reviewsText);
+    UserPreferenceProfileDto generateProfile(String reviewsText, String feedbackText);
 
     LLMIntentFilters extractIntent(List<ChatMessage> history, UserPreferenceProfileDto profile);
 
@@ -18,6 +18,7 @@ public interface LLMService {
             UserPreferenceProfileDto profile,
             String watchlistText,
             String topRatingsText,
+            String feedbackText,
             List<MovieResponse> candidates
     );
 }

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import type { ChatMessage, ChatResponse, Movie } from '../types';
-import MovieCard from '../components/MovieCard';
+import MovieCard, { type FeedbackSignal } from '../components/MovieCard';
 import './Chat.css';
 
 interface ChatTurn {
@@ -31,6 +31,7 @@ function loadTurns(): ChatTurn[] {
 export default function ChatPage() {
   const { userId } = useAuth();
   const [turns, setTurns] = useState<ChatTurn[]>(loadTurns);
+  const [feedback, setFeedback] = useState<Record<number, FeedbackSignal>>({});
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [ratingsCount, setRatingsCount] = useState<number | null>(null);
@@ -55,6 +56,41 @@ export default function ChatPage() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(turns));
   }, [turns]);
+
+  useEffect(() => {
+    if (!userId) return;
+    api.get<{ tmdbId: number; signal: FeedbackSignal }[]>('/chat/feedback')
+      .then((res) => {
+        const map: Record<number, FeedbackSignal> = {};
+        res.data.forEach((f) => { map[f.tmdbId] = f.signal; });
+        setFeedback(map);
+      })
+      .catch((err) => console.error('Failed to fetch feedback:', err));
+  }, [userId]);
+
+  const applyFeedback = (tmdbId: number, signal: FeedbackSignal | undefined) => {
+    setFeedback((prev) => {
+      const next = { ...prev };
+      if (signal) next[tmdbId] = signal;
+      else delete next[tmdbId];
+      return next;
+    });
+  };
+
+  const handleFeedback = async (tmdbId: number, signal: FeedbackSignal) => {
+    const previous = feedback[tmdbId];
+    applyFeedback(tmdbId, previous === signal ? undefined : signal);
+    try {
+      const res = await api.post<{ tmdbId: number; signal: FeedbackSignal | null }>(
+        '/chat/feedback',
+        { tmdbId, signal },
+      );
+      applyFeedback(tmdbId, res.data.signal ?? undefined);
+    } catch (err) {
+      console.error('Feedback failed:', err);
+      applyFeedback(tmdbId, previous);
+    }
+  };
 
   const clearConversation = () => {
     setTurns([]);
@@ -179,6 +215,8 @@ export default function ChatPage() {
                     key={m.id}
                     movie={m}
                     onClick={(movie) => navigate(`/movie/${movie.id}`)}
+                    feedback={feedback[m.tmdbId]}
+                    onFeedback={(signal) => handleFeedback(m.tmdbId, signal)}
                   />
                 ))}
               </div>

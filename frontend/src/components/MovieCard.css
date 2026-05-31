@@ -70,3 +70,39 @@
   color: var(--primary-light);
   font-weight: 600;
 }
+
+.movie-card-feedback {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.movie-card-feedback-btn {
+  flex: 1;
+  padding: 5px 0;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+  border-radius: var(--radius-sm, 6px);
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  font-size: 0.95rem;
+  line-height: 1;
+  opacity: 0.6;
+  transition: opacity var(--transition-normal), background var(--transition-normal), border-color var(--transition-normal);
+}
+
+.movie-card-feedback-btn:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.movie-card-feedback-btn.active-positive {
+  opacity: 1;
+  background: rgba(46, 160, 67, 0.18);
+  border-color: rgba(46, 160, 67, 0.6);
+}
+
+.movie-card-feedback-btn.active-negative {
+  opacity: 1;
+  background: rgba(218, 54, 51, 0.18);
+  border-color: rgba(218, 54, 51, 0.6);
+}

@@ -35,6 +35,8 @@ public class UserPreferenceProfile {
     @Column(nullable = false)
     private Integer reviewCountAtGeneration;
 
+    private Integer feedbackCountAtGeneration;
+
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 }

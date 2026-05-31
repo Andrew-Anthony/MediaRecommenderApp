@@ -17,6 +17,7 @@ public class RatingService {
     private final UserService userService;
     private final MovieService movieService;
     private final WatchlistService watchlistService;
+    private final ChatFeedbackService chatFeedbackService;
 
     public List<Rating> getRatingsByUser(Long userId) {
         return ratingRepository.findByUserId(userId);
@@ -47,6 +48,7 @@ public class RatingService {
 
         Rating saved = ratingRepository.save(rating);
         watchlistService.markAsWatched(userId, movieId);
+        chatFeedbackService.removeForMovie(userId, movieId);
         return saved;
     }
 

@@ -81,19 +81,26 @@ public class GeminiLLMService implements LLMService {
     );
 
     @Override
-    public UserPreferenceProfileDto generateProfile(String reviewsText) {
+    public UserPreferenceProfileDto generateProfile(String reviewsText, String feedbackText) {
         String systemInstruction = """
-                You analyze a user's movie reviews and extract a concise preference profile.
-                Read all reviews and identify recurring patterns about what the user values or dislikes.
+                You analyze a user's movie reviews and explicit thumbs up/down feedback, and extract a concise preference profile.
+                Identify recurring patterns about what the user values or dislikes.
+                Treat thumbs-up movies as strong positive signals and thumbs-down as strong negative signals, even without a written review.
                 Output 3-7 short tag-like entries per category (e.g. "psychological complexity", "slow pacing", "strong female leads").
-                Be specific to the user's actual reviews, not generic.
+                Be specific to the user's actual taste, not generic.
                 """;
 
-        String userPrompt = "Here are the user's movie reviews:\n\n" + reviewsText
-                + "\n\nExtract the preference profile as JSON.";
+        StringBuilder userPrompt = new StringBuilder();
+        if (reviewsText != null && !reviewsText.isBlank()) {
+            userPrompt.append("User's movie reviews:\n\n").append(reviewsText).append("\n");
+        }
+        if (feedbackText != null && !feedbackText.isBlank()) {
+            userPrompt.append("\nUser's explicit feedback on recommended movies:\n").append(feedbackText).append("\n");
+        }
+        userPrompt.append("\nExtract the preference profile as JSON.");
 
         String jsonText = callGemini(
-                List.of(new ChatMessage("user", userPrompt)),
+                List.of(new ChatMessage("user", userPrompt.toString())),
                 systemInstruction,
                 PROFILE_SCHEMA
         );
@@ -201,9 +208,10 @@ public class GeminiLLMService implements LLMService {
             UserPreferenceProfileDto profile,
             String watchlistText,
             String topRatingsText,
+            String feedbackText,
             List<MovieResponse> candidates
     ) {
-        String systemInstruction = buildChatSystemInstruction(profile, watchlistText, topRatingsText, candidates);
+        String systemInstruction = buildChatSystemInstruction(profile, watchlistText, topRatingsText, feedbackText, candidates);
 
         String jsonText = callGemini(history, systemInstruction, RERANK_SCHEMA);
 
@@ -257,6 +265,7 @@ public class GeminiLLMService implements LLMService {
             UserPreferenceProfileDto profile,
             String watchlistText,
             String topRatingsText,
+            String feedbackText,
             List<MovieResponse> candidates
     ) {
         StringBuilder sb = new StringBuilder();
@@ -278,6 +287,10 @@ public class GeminiLLMService implements LLMService {
 
         sb.append("USER'S WATCHLIST:\n");
         sb.append(watchlistText.isBlank() ? "(empty)\n" : watchlistText).append("\n");
+
+        sb.append("RECENT EXPLICIT FEEDBACK (user clicked thumbs up/down on these):\n");
+        sb.append(feedbackText.isBlank() ? "(none)\n" : feedbackText);
+        sb.append("Lean toward movies similar to thumbs-up titles; avoid movies similar to thumbs-down titles.\n\n");
 
         sb.append("CANDIDATE MOVIES (already filtered by the recommender engine, excluding watchlist):\n");
         if (candidates.isEmpty()) {
