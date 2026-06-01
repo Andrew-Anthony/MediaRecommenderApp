@@ -318,6 +318,7 @@ public class GeminiLLMService implements LLMService {
         sb.append("Include a short 'reason' (max 1 sentence) for each.\n");
         sb.append("3. If there are no candidates, return an empty rerank list and just reply conversationally.\n");
         sb.append("4. The CURRENT REQUEST overrides the general profile: a candidate that doesn't genuinely match the requested genre/mood scores 0-3, even if it fits the user's taste or has a high rating. Genre tags are loose — judge the actual film (e.g. \"psychological thriller\" → Harry Potter = 0-3).\n");
+        sb.append("5. If the user's mood implies low intensity (relaxant, relaxing, chill, calm, cozy, lejer, ușor, liniștit), treat high-intensity films (action, thriller, horror, war, intense or dark sci-fi, epic superhero battles) as a mood mismatch and score them 0-3 even if highly rated or matching the user's taste. Prefer comedy, romance, feel-good, gentle animation, slice-of-life, light drama.\n");
         return sb.toString();
     }
 }

@@ -29,6 +29,7 @@ public class ChatService {
     private static final int RESULT_LIMIT_MAX = 8;
     private static final int RESULT_LIMIT_MIN = 1;
     private static final double QUALITY_THRESHOLD = 7.0;
+    private static final double GEMINI_VETO_THRESHOLD = 4.0;
     private static final int TOP_RATINGS_LIMIT = 10;
     private static final int WATCHLIST_LIMIT = 20;
     private static final double PYTHON_WEIGHT = 0.5;
@@ -143,6 +144,16 @@ public class ChatService {
                 : rerank.stream()
                 .filter(r -> r.getTmdbId() != null && r.getScore() != null)
                 .collect(Collectors.toMap(RerankItem::getTmdbId, RerankItem::getScore, (a, b) -> a));
+
+        List<MovieResponse> notRejected = candidates.stream()
+                .filter(m -> {
+                    Double g = m.getTmdbId() == null ? null : geminiScores.get(m.getTmdbId().intValue());
+                    return g == null || g >= GEMINI_VETO_THRESHOLD;
+                })
+                .toList();
+        if (!notRejected.isEmpty()) {
+            candidates = notRejected;
+        }
 
         DoubleSummaryStatistics stats = candidates.stream()
                 .filter(m -> m.getPredictedRating() != null)
