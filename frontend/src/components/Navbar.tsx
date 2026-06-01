@@ -17,7 +17,10 @@ export default function Navbar() {
   return (
     <nav className={`navbar ${scrolled ? 'scrolled' : ''}`}>
       <div className="navbar-left">
-        <Link to="/" className="navbar-logo">MediaRecommender</Link>
+        <Link to="/" className="navbar-logo">
+          <img src="/favicon.svg" alt="" className="navbar-logo-icon" />
+          Cinematch
+        </Link>
         <div className="navbar-links">
           <Link to="/search" className={location.pathname === '/search' ? 'active' : ''}>Search</Link>
           {isAuthenticated && (

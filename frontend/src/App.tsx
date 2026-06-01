@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import HomePage from './pages/HomePage';
@@ -10,10 +11,29 @@ import ProfilePage from './pages/ProfilePage';
 import WatchlistPage from './pages/WatchlistPage';
 import ChatPage from './pages/ChatPage';
 
+const PAGE_TITLES: Record<string, string> = {
+  '/login': 'Sign In',
+  '/register': 'Sign Up',
+  '/search': 'Search',
+  '/profile': 'Profile',
+  '/watchlist': 'Watchlist',
+  '/chat': 'Chat',
+};
+
+function PageTitle() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    const page = PAGE_TITLES[pathname];
+    document.title = page ? `${page} — Cinematch` : 'Cinematch';
+  }, [pathname]);
+  return null;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <PageTitle />
         <Navbar />
         <Routes>
           <Route path="/" element={<HomePage />} />

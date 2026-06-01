@@ -17,19 +17,21 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
-  align-items: start;
+  align-items: stretch;
 }
 
-.profile-grid-left {
+.profile-grid > .profile-section {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  margin-bottom: 0;
 }
 
-.profile-grid-right {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+.profile-grid .profile-form {
+  flex: 1;
+}
+
+.profile-grid .profile-form .profile-btn {
+  margin-top: auto;
 }
 
 .profile-section {
@@ -138,7 +140,8 @@
 
 .profile-stats {
   display: flex;
-  gap: 24px;
+  flex-wrap: wrap;
+  gap: 24px 40px;
 }
 
 .profile-stat {

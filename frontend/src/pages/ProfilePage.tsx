@@ -14,6 +14,8 @@ interface UserData {
 interface Stats {
   watchlistCount: number;
   ratingsCount: number;
+  reviewsCount: number;
+  feedbackCount: number;
 }
 
 const parseError = (err: any): string => {
@@ -33,7 +35,7 @@ export default function ProfilePage() {
   };
 
   const [userData, setUserData] = useState<UserData | null>(null);
-  const [stats, setStats] = useState<Stats>({ watchlistCount: 0, ratingsCount: 0 });
+  const [stats, setStats] = useState<Stats>({ watchlistCount: 0, ratingsCount: 0, reviewsCount: 0, feedbackCount: 0 });
 
   const [newUsername, setNewUsername] = useState('');
   const [newEmail, setNewEmail] = useState('');
@@ -54,13 +56,16 @@ export default function ProfilePage() {
         setNewUsername(userRes.data.username);
         setNewEmail(userRes.data.email);
 
-        const [watchlistRes, ratingsRes] = await Promise.all([
+        const [watchlistRes, ratingsRes, feedbackRes] = await Promise.all([
           api.get<any[]>(`/users/${userId}/watchlist`),
           api.get<any[]>(`/users/${userId}/ratings`),
+          api.get<any[]>('/chat/feedback'),
         ]);
         setStats({
           watchlistCount: watchlistRes.data.length,
           ratingsCount: ratingsRes.data.length,
+          reviewsCount: ratingsRes.data.filter((r) => r.review && r.review.trim().length > 0).length,
+          feedbackCount: feedbackRes.data.length,
         });
       } catch (err) {
         console.error('Failed to fetch profile:', err);
@@ -140,8 +145,16 @@ export default function ProfilePage() {
             <span className="profile-stat-label">Movies Rated</span>
           </div>
           <div className="profile-stat">
+            <span className="profile-stat-value">{stats.reviewsCount}</span>
+            <span className="profile-stat-label">Reviews Written</span>
+          </div>
+          <div className="profile-stat">
             <span className="profile-stat-value">{stats.watchlistCount}</span>
             <span className="profile-stat-label">In Watchlist</span>
+          </div>
+          <div className="profile-stat">
+            <span className="profile-stat-value">{stats.feedbackCount}</span>
+            <span className="profile-stat-label">Feedback Given</span>
           </div>
           {memberSince && (
             <div className="profile-stat">
@@ -152,9 +165,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Two-column grid */}
       <div className="profile-grid">
-        {/* Left — Account Info */}
         <div className="profile-section">
           <div className="profile-section-title">Account Info</div>
           <form className="profile-form" onSubmit={handleUpdateProfile}>
@@ -185,7 +196,6 @@ export default function ProfilePage() {
           </form>
         </div>
 
-        {/* Right — Change Password + Sign Out */}
         <div className="profile-section">
           <div className="profile-section-title">Change Password</div>
           <form className="profile-form" onSubmit={handleChangePassword}>
